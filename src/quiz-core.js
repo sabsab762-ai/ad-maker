@@ -480,7 +480,7 @@
 
   function promoPosts(quiz, result, url) {
     var link = normalizeUrl(url || '');
-    var linkLine = link ? link : '(링크 붙이기)';
+    var linkLine = link ? link : '프로필 링크';
     var title = quiz.title;
     var t = result ? result.type : null;
     var sample = t ? t.emoji + ' ' + t.name + ' 나왔어요' : '유형이 딱 나와요';
