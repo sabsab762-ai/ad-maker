@@ -36,7 +36,8 @@
         '.qz-src{font-size:11.5px;color:var(--muted);margin-top:8px}' +
         '.qz-cnt{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}' +
         '.qz-note{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.65}' +
-        '.qz-full .qz-frame{height:calc(100vh - 220px);min-height:640px}';
+        '.qz-full .qz-frame{height:calc(100vh - 220px);min-height:640px}' +
+        '#qz-themes .chip,#qz-counts .chip,#qz-ctas .chip{white-space:nowrap}';
       document.head.appendChild(st);
 
       root.innerHTML =

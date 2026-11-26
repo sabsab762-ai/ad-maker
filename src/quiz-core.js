@@ -483,7 +483,7 @@
     var linkLine = link ? link : '(링크 붙이기)';
     var title = quiz.title;
     var t = result ? result.type : null;
-    var sample = t ? '나는 ' + t.emoji + ' ' + t.name + ' 나왔어요' : '유형이 딱 나와요';
+    var sample = t ? t.emoji + ' ' + t.name + ' 나왔어요' : '유형이 딱 나와요';
     var countLine = quiz.count + '문항, 1분이면 끝';
 
     var danggeun = [

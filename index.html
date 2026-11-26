@@ -1037,12 +1037,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     }
     var weak = ELEM_INFO[minIdx], strong = ELEM_INFO[maxIdx];
     var luck = [];
-    luck.push('부족한 ' + weak.name + ' 기운 채우기 — ' + weak.colorName + ' 소품, ' + weak.dir + ' 자리, 숫자 ' + weak.num + '. ' + weak.act + '이 잘 맞아요.');
-    luck.push('먹는 것으로는 ' + weak.food + '을 챙기면 좋습니다.');
+    luck.push('부족한 ' + weak.name + ' 기운 채우기 — ' + weak.colorName + ' 소품, ' + weak.dir + ' 자리, 숫자 ' + weak.num + '. 잘 맞는 활동은 ' + weak.act + '.');
+    luck.push('먹는 쪽은 ' + weak.food + ' 쪽이 좋아요.');
     if (counts[maxIdx] >= 3) {
-      luck.push(strong.name + ' 기운이 강한 편이라, ' + strong.act + '은 적당히로 줄이고 반대 기운(' + ELEM_INFO[(maxIdx + 2) % 5].name + ') 활동을 섞어 주세요.');
+      luck.push(strong.name + ' 기운이 강한 편이라 ' + strong.act + ' 같은 활동은 적당히 줄이고, 반대 기운(' + ELEM_INFO[(maxIdx + 2) % 5].name + ')을 섞어 주세요.');
     } else {
-      luck.push('기운이 고르게 퍼져 있어 큰 보정은 필요 없어요. 대신 ' + ELEM_INFO[(P.dayMaster.elem + 1) % 5].name + ' 기운(' + ELEM_INFO[(P.dayMaster.elem + 1) % 5].act + ')을 조금 더하면 흐름이 좋아집니다.');
+      luck.push('기운이 고르게 퍼져 있어 큰 보정은 필요 없어요. 대신 ' + ELEM_INFO[(P.dayMaster.elem + 1) % 5].name + ' 기운을 조금 더해 보세요 — ' + ELEM_INFO[(P.dayMaster.elem + 1) % 5].act + '.');
     }
 
     /* 요약 */
@@ -1613,7 +1613,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     var linkLine = link ? link : '(링크 붙이기)';
     var title = quiz.title;
     var t = result ? result.type : null;
-    var sample = t ? '나는 ' + t.emoji + ' ' + t.name + ' 나왔어요' : '유형이 딱 나와요';
+    var sample = t ? t.emoji + ' ' + t.name + ' 나왔어요' : '유형이 딱 나와요';
     var countLine = quiz.count + '문항, 1분이면 끝';
 
     var danggeun = [
@@ -3925,8 +3925,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
   var MODES = [
     { v: '1', label: '① 내 사주풀이' },
-    { v: '2', label: '② 사주 홍보글 + 맛보기 카드' },
-    { v: '3', label: '③ 사주 CPA 제휴 유입글' }
+    { v: '2', label: '② 홍보글 + 카드' },
+    { v: '3', label: '③ CPA 유입글' }
   ];
 
   function hourOptions() {
@@ -4176,7 +4176,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   function promoPosts(r, brand, link, mode) {
     var nm = nameOf(r.input.name);
     var brandLine = brand ? brand : '사주 자판기';
-    var linkLine = link || '(링크 붙이기)';
+    var linkLine = link || (mode === '3' ? '(제휴 링크 붙이기)' : '프로필 링크');
     var dm = r.dayMaster;
     var top = r.strongest.name;
     var today = r.today.keyword;
@@ -4267,7 +4267,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       '사주에서 제일 먼저 봐야 하는 건 "일간"이에요.',
       '',
       '저는 ' + dm.stem + dm.elem + ' 일간 · ' + dm.title + '.',
-      '오행은 ' + top + '이 ' + r.strongest.pct + '%로 제일 강하고요.',
+      '오행은 ' + top + ' 기운이 ' + r.strongest.pct + '%로 제일 강하고요.',
       '',
       '이걸 알면 "왜 나는 이럴 때 잘 풀리지"가 설명됩니다.',
       '무료 맛보기 → ' + linkLine
@@ -4277,7 +4277,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       '🔮 내 사주 3초 만에 보는 법',
       '',
       nm + '님은 ' + r.names.year + '년 ' + r.names.month + '월 ' + r.names.day + '일생, ' + dm.stem + dm.elem + ' 일간.',
-      '"' + dm.title + '" 기운이고 ' + top + '이 ' + r.strongest.pct + '%로 가장 강해요.',
+      '"' + dm.title + '" 기운이고 ' + top + ' 기운이 ' + r.strongest.pct + '%로 가장 강해요.',
       '오늘의 키워드는 "' + today + '".',
       '',
       '생년월일만 넣으면 사주팔자·오행·오늘 운까지 무료!',
@@ -4369,7 +4369,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         '.sj-card-row b{color:#2A2A33}' +
         '.sj-card-cta{margin-top:12px;padding:9px;border-radius:9px;background:#6338F5;color:#fff;text-align:center;font-size:11px;font-weight:800;word-break:break-all}' +
         '.sj-card-foot{margin-top:8px;text-align:center;font-size:9.5px;color:#9C9CA8}' +
-        '@media (max-width:720px){.sj-two{grid-template-columns:1fr}.sj-pil .ch{font-size:22px}}';
+        '@media (max-width:720px){.sj-two{grid-template-columns:1fr}.sj-pil .ch{font-size:22px}}' +
+        '#sj-modes .chip{white-space:nowrap}';
       document.head.appendChild(st);
 
       root.innerHTML =
@@ -4582,7 +4583,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         '.qz-src{font-size:11.5px;color:var(--muted);margin-top:8px}' +
         '.qz-cnt{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}' +
         '.qz-note{margin-top:10px;font-size:11.5px;color:var(--muted);line-height:1.65}' +
-        '.qz-full .qz-frame{height:calc(100vh - 220px);min-height:640px}';
+        '.qz-full .qz-frame{height:calc(100vh - 220px);min-height:640px}' +
+        '#qz-themes .chip,#qz-counts .chip,#qz-ctas .chip{white-space:nowrap}';
       document.head.appendChild(st);
 
       root.innerHTML =

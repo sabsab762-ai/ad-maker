@@ -358,12 +358,12 @@
     }
     var weak = ELEM_INFO[minIdx], strong = ELEM_INFO[maxIdx];
     var luck = [];
-    luck.push('부족한 ' + weak.name + ' 기운 채우기 — ' + weak.colorName + ' 소품, ' + weak.dir + ' 자리, 숫자 ' + weak.num + '. ' + weak.act + '이 잘 맞아요.');
-    luck.push('먹는 것으로는 ' + weak.food + '을 챙기면 좋습니다.');
+    luck.push('부족한 ' + weak.name + ' 기운 채우기 — ' + weak.colorName + ' 소품, ' + weak.dir + ' 자리, 숫자 ' + weak.num + '. 잘 맞는 활동은 ' + weak.act + '.');
+    luck.push('먹는 쪽은 ' + weak.food + ' 쪽이 좋아요.');
     if (counts[maxIdx] >= 3) {
-      luck.push(strong.name + ' 기운이 강한 편이라, ' + strong.act + '은 적당히로 줄이고 반대 기운(' + ELEM_INFO[(maxIdx + 2) % 5].name + ') 활동을 섞어 주세요.');
+      luck.push(strong.name + ' 기운이 강한 편이라 ' + strong.act + ' 같은 활동은 적당히 줄이고, 반대 기운(' + ELEM_INFO[(maxIdx + 2) % 5].name + ')을 섞어 주세요.');
     } else {
-      luck.push('기운이 고르게 퍼져 있어 큰 보정은 필요 없어요. 대신 ' + ELEM_INFO[(P.dayMaster.elem + 1) % 5].name + ' 기운(' + ELEM_INFO[(P.dayMaster.elem + 1) % 5].act + ')을 조금 더하면 흐름이 좋아집니다.');
+      luck.push('기운이 고르게 퍼져 있어 큰 보정은 필요 없어요. 대신 ' + ELEM_INFO[(P.dayMaster.elem + 1) % 5].name + ' 기운을 조금 더해 보세요 — ' + ELEM_INFO[(P.dayMaster.elem + 1) % 5].act + '.');
     }
 
     /* 요약 */

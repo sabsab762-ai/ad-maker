@@ -7,8 +7,8 @@
 
   var MODES = [
     { v: '1', label: '① 내 사주풀이' },
-    { v: '2', label: '② 사주 홍보글 + 맛보기 카드' },
-    { v: '3', label: '③ 사주 CPA 제휴 유입글' }
+    { v: '2', label: '② 홍보글 + 카드' },
+    { v: '3', label: '③ CPA 유입글' }
   ];
 
   function hourOptions() {
@@ -258,7 +258,7 @@
   function promoPosts(r, brand, link, mode) {
     var nm = nameOf(r.input.name);
     var brandLine = brand ? brand : '사주 자판기';
-    var linkLine = link || '(링크 붙이기)';
+    var linkLine = link || (mode === '3' ? '(제휴 링크 붙이기)' : '프로필 링크');
     var dm = r.dayMaster;
     var top = r.strongest.name;
     var today = r.today.keyword;
@@ -349,7 +349,7 @@
       '사주에서 제일 먼저 봐야 하는 건 "일간"이에요.',
       '',
       '저는 ' + dm.stem + dm.elem + ' 일간 · ' + dm.title + '.',
-      '오행은 ' + top + '이 ' + r.strongest.pct + '%로 제일 강하고요.',
+      '오행은 ' + top + ' 기운이 ' + r.strongest.pct + '%로 제일 강하고요.',
       '',
       '이걸 알면 "왜 나는 이럴 때 잘 풀리지"가 설명됩니다.',
       '무료 맛보기 → ' + linkLine
@@ -359,7 +359,7 @@
       '🔮 내 사주 3초 만에 보는 법',
       '',
       nm + '님은 ' + r.names.year + '년 ' + r.names.month + '월 ' + r.names.day + '일생, ' + dm.stem + dm.elem + ' 일간.',
-      '"' + dm.title + '" 기운이고 ' + top + '이 ' + r.strongest.pct + '%로 가장 강해요.',
+      '"' + dm.title + '" 기운이고 ' + top + ' 기운이 ' + r.strongest.pct + '%로 가장 강해요.',
       '오늘의 키워드는 "' + today + '".',
       '',
       '생년월일만 넣으면 사주팔자·오행·오늘 운까지 무료!',
@@ -451,7 +451,8 @@
         '.sj-card-row b{color:#2A2A33}' +
         '.sj-card-cta{margin-top:12px;padding:9px;border-radius:9px;background:#6338F5;color:#fff;text-align:center;font-size:11px;font-weight:800;word-break:break-all}' +
         '.sj-card-foot{margin-top:8px;text-align:center;font-size:9.5px;color:#9C9CA8}' +
-        '@media (max-width:720px){.sj-two{grid-template-columns:1fr}.sj-pil .ch{font-size:22px}}';
+        '@media (max-width:720px){.sj-two{grid-template-columns:1fr}.sj-pil .ch{font-size:22px}}' +
+        '#sj-modes .chip{white-space:nowrap}';
       document.head.appendChild(st);
 
       root.innerHTML =
