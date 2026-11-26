@@ -10,7 +10,7 @@
     for (var i = 0; i < 22; i++) {
       out += '<button class="tt-card" type="button" data-card="' + i + '" aria-label="' + (i + 1) + '번째 카드 뒤집기" aria-pressed="false">' +
         '<span class="tt-inner"><span class="tt-back"><i>✦</i><b>?</b></span>' +
-        '<span class="tt-face" data-face></span></span></button>';
+        '<span class="tt-face" data-face aria-hidden="true"></span></span></button>';
     }
     return out;
   }
@@ -26,7 +26,7 @@
     var html = '<div class="out">';
     r.cards.forEach(function (c, i) {
       html += '<div class="cardout"><div class="ch"><span class="t">' + esc(c.pos) + ' · ' + esc(c.roman) + '. ' + esc(c.name) + '</span>' +
-        '<span class="m">' + (c.reversed ? '역방향' : '정방향') + '</span></div>' +
+        '<span class="m">' + (c.reversed ? '카드가 거꾸로' : '바른 방향') + '</span></div>' +
         '<div class="cb" style="white-space:normal">' +
         '<div class="tt-read-top"><span class="tt-read-emoji">' + c.emoji + '</span>' +
         '<div><b>' + esc(c.name) + ' <small>' + esc(c.en) + '</small></b>' +
