@@ -220,11 +220,16 @@
     }
 
     x.fillStyle = '#FFFFFF'; x.strokeStyle = '#E8E3FA';
-    roundRect(x, 80, 1080, W - 160, 120, 24); x.fill(); x.stroke();
+    x.fillStyle = '#8A8A96'; x.font = '600 26px ' + sans; x.textAlign = 'center';
+    x.fillText('“사주는 재미로, 선택은 내가.”', W / 2, 1075);
+    x.textAlign = 'left';
+
+    x.fillStyle = '#FFFFFF'; x.strokeStyle = '#E8E3FA';
+    roundRect(x, 80, 1140, W - 160, 130, 24); x.fill(); x.stroke();
     x.fillStyle = '#4C24D6'; x.font = '800 34px ' + sans;
-    x.fillText(link ? shortLink(link) : '프로필 링크에서 전체 풀이 보기', 110, 1148);
+    x.fillText(link ? shortLink(link) : '프로필 링크에서 전체 풀이 보기', 110, 1208);
     x.fillStyle = '#9C9CA8'; x.font = '600 24px ' + sans;
-    x.fillText('재미로 보는 사주입니다 · ' + (brand || '사주 자판기'), 110, 1184);
+    x.fillText('재미로 보는 사주입니다 · ' + (brand || '사주 자판기'), 110, 1246);
 
     if (cv.toBlob) {
       cv.toBlob(function (blob) {
@@ -590,7 +595,8 @@
               if (!url) { App.toast('카드 이미지를 만들지 못했어요. 브라우저를 바꿔 보세요.'); return; }
               var a = document.createElement('a');
               a.href = url;
-              a.download = '사주카드_' + (r.input.name || '사주') + '_' + r.input.y + r.input.m + r.input.d + '.png';
+              a.download = '사주카드_' + (r.input.name || '사주') + '_' + r.input.y + '-' +
+                (r.input.m < 10 ? '0' + r.input.m : r.input.m) + '-' + (r.input.d < 10 ? '0' + r.input.d : r.input.d) + '.png';
               document.body.appendChild(a); a.click(); document.body.removeChild(a);
               setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
               App.toast('카드 PNG를 저장했어요.');

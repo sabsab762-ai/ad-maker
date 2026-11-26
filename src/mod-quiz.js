@@ -199,8 +199,10 @@
         el.sub.textContent = '결과 화면까지 눌러보세요';
         el.fileActions.hidden = false;
         el.fileNote.hidden = false;
+        var bytes = 0;
+        try { bytes = new Blob([state.html], { type: 'text/html' }).size; } catch (e) { bytes = state.html.length; }
         el.fileNote.innerHTML = '결과 화면 하단 버튼: <b>' + esc(quiz.cta.url ? quiz.cta.label + ' → ' + quiz.cta.url : '없음 (링크를 넣으면 붙습니다)') + '</b><br>' +
-          '파일 용량 ' + Math.round(state.html.length / 1024 * 10) / 10 + 'KB · 외부 라이브러리 없이 단독 실행됩니다.';
+          '파일 크기 ' + Math.round(bytes / 1024 * 10) / 10 + 'KB · 외부 라이브러리 없이 단독 실행됩니다.';
         renderPosts();
 
         S.set('quiz.last', {
