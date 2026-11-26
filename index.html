@@ -6456,7 +6456,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     for (var i = 0; i < 22; i++) {
       out += '<button class="tt-card" type="button" data-card="' + i + '" aria-label="' + (i + 1) + '번째 카드 뒤집기" aria-pressed="false">' +
         '<span class="tt-inner"><span class="tt-back"><i>✦</i><b>?</b></span>' +
-        '<span class="tt-face" data-face aria-hidden="true"></span></span></button>';
+        '<span class="tt-face" data-face></span></span></button>';
     }
     return out;
   }
@@ -6606,6 +6606,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           var on = x.getAttribute('data-spread') === state.spread;
           x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
+        var sp0 = TC.spreadOf(state.spread);
+        el.need.textContent = sp0.count + '장';
+        el.spreadDesc.textContent = sp0.label + ' — ' + sp0.desc;
       }
 
       H.$$('[data-topic]', root).forEach(function (b) {
@@ -6654,7 +6657,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           c.setAttribute('aria-pressed', 'false');
           c.setAttribute('aria-label', (i + 1) + '번째 카드 뒤집기');
           var face = H.$('[data-face]', c);
-          if (face && state.deck[i]) face.innerHTML = cardFace(state.deck[i]);
+          if (face) face.innerHTML = '';
         });
         el.need.textContent = needCount() + '장';
         el.out.innerHTML = '<section class="panel"><h3>🃏 리딩 결과</h3><div class="empty"><b>' +
@@ -6673,6 +6676,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         }
         var drawn = state.deck[idx];
         if (!drawn) return;
+        var face = H.$('[data-face]', btn);
+        if (face) face.innerHTML = cardFace(drawn);   /* 뒤집는 순간에만 앞면을 그립니다 */
         btn.classList.add('flipped', 'picked');
         btn.setAttribute('aria-pressed', 'true');
         btn.setAttribute('aria-label', drawn.card.name + (drawn.reversed ? ' 역방향' : ' 정방향'));
