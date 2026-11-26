@@ -184,7 +184,7 @@
 
     app.innerHTML = '<div class="wrap">' +
       '<div class="hello"><h1>환영합니다, 운영 관리자님</h1>' +
-      '<p>광고 소재 만들기 9종 자판기 — 필요한 카드를 누르면 바로 시작합니다. 작업 내용은 이 브라우저에 자동 저장돼요.</p></div>' +
+      '<p>광고 소재 만들기 ' + App.modules.length + '종 자판기 — 필요한 카드를 누르면 바로 시작합니다. 작업 내용은 이 브라우저에 자동 저장돼요.</p></div>' +
       '<div class="grid">' + cards + '</div>' +
       '</div>';
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -265,8 +265,8 @@
     }).join('');
     openModal('<button class="x" type="button" data-close>✕</button>' +
       '<h3>이 기능 도움말</h3>' +
-      '<p style="margin-top:8px">모든 기능은 이 브라우저 안에서만 동작하고, 입력한 내용은 서버로 보내지 않습니다. 아래 9개 자판기를 눌러 바로 쓸 수 있어요.</p>' +
-      '<h4>9개 자판기</h4><ul>' + list + '</ul>' +
+      '<p style="margin-top:8px">모든 기능은 이 브라우저 안에서만 동작하고, 입력한 내용은 서버로 보내지 않습니다. 아래 ' + App.modules.length + '개 자판기를 눌러 바로 쓸 수 있어요.</p>' +
+      '<h4>' + App.modules.length + '개 자판기</h4><ul>' + list + '</ul>' +
       '<h4>기억해 두세요</h4><ul>' +
       '<li>작업 내용은 <b>이 브라우저(localStorage)</b>에 자동 저장됩니다. 브라우저 기록을 지우면 함께 사라지니, 중요하면 상단 <b>데이터 백업</b>으로 JSON을 받아 두세요.</li>' +
       '<li>인스타 카드·상세페이지처럼 파일로 내려받는 기능은 버튼을 누르면 바로 다운로드 폴더에 저장됩니다.</li>' +

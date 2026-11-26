@@ -6,6 +6,8 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(BASE, 'src')
 ORDER = [
     'core.js',
+    'saju-core.js',
+    'quiz-core.js',
     'mod-danggeun.js',
     'mod-insta.js',
     'mod-thread.js',
@@ -15,6 +17,8 @@ ORDER = [
     'mod-cheat.js',
     'mod-analyze.js',
     'mod-detail.js',
+    'mod-saju.js',
+    'mod-quiz.js',
     'init.js',
 ]
 
