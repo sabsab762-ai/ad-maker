@@ -6,11 +6,11 @@
   var H = App.helpers, esc = App.esc;
 
   var FRAMES = [
-    { name: '훅', label: 'HOOK', len: 3, shot: '정면 클로즈업', en: 'extreme close-up, product held toward camera, eyes to lens', ko: '제품을 카메라 쪽으로 들고 정면을 바라보는 클로즈업' },
+    { name: '훅', label: 'HOOK', len: 3, shot: '정면 클로즈업', en: 'extreme close-up of {p} held toward camera, eyes to lens', ko: '제품을 카메라 쪽으로 들고 정면을 바라보는 클로즈업' },
     { name: '문제', label: 'PROBLEM', len: 4, shot: '일상 공간 미디엄샷', en: 'medium shot in a cluttered home, frustrated expression, handheld', ko: '어수선한 집 안, 답답한 표정의 미디엄샷, 핸드헬드' },
-    { name: '해결', label: 'SOLUTION', len: 5, shot: '제품 사용 장면', en: 'smooth product-in-use shot, slow push-in, soft daylight', ko: '제품을 사용하는 장면, 천천히 다가가는 카메라, 부드러운 자연광' },
+    { name: '해결', label: 'SOLUTION', len: 5, shot: '제품 사용 장면', en: 'smooth shot of {p} in use, slow push-in, soft daylight', ko: '제품을 사용하는 장면, 천천히 다가가는 카메라, 부드러운 자연광' },
     { name: '증거', label: 'PROOF', len: 4, shot: '비포·애프터 대비', en: 'split-screen before and after, clean composition, top light', ko: '비포·애프터 분할 화면, 깔끔한 구도, 상단 조명' },
-    { name: '반전/포인트', label: 'TWIST', len: 3, shot: '디테일 인서트', en: 'macro insert shot of a detail, shallow depth of field', ko: '디테일 매크로 인서트, 얕은 심도' },
+    { name: '반전/포인트', label: 'TWIST', len: 3, shot: '디테일 인서트', en: 'macro insert shot of a product detail, shallow depth of field', ko: '디테일 매크로 인서트, 얕은 심도' },
     { name: 'CTA', label: 'CTA', len: 3, shot: '텍스트 오버레이 엔드카드', en: 'clean end card with space for text overlay, brand color background', ko: '텍스트를 얹을 여백이 있는 엔드카드, 브랜드 컬러 배경' }
   ];
 
@@ -50,7 +50,7 @@
   function fill(tpl, topic) { return String(tpl).replace(/\{t\}/g, topic); }
 
   function build(topic, productEn, target, cuts) {
-    var plan = FRAMES.slice(0, cuts);
+    var plan = cuts >= 6 ? FRAMES.slice(0, 6) : FRAMES.slice(0, Math.max(2, cuts - 1)).concat([FRAMES[5]]);
     var total = 0, i;
     for (i = 0; i < plan.length; i++) total += plan[i].len;
     var t = 0;
@@ -59,9 +59,10 @@
       t = end;
       var key = f.label.toLowerCase();
       var line = fill(H.pick(SCRIPTS[key] || SCRIPTS.solution), topic);
+      if (f.label === 'CTA' && target) line = target + '께 필요한 정보만 정리해뒀어요. 프로필 링크 확인해 주세요.';
       var subj = productEn || 'the product';
-      var en = 'Vertical 9:16 short-form video, ' + f.en.replace('product', subj) +
-        ', ' + (target ? target + ', ' : '') + 'natural color grade, shot on 35mm, 4k, no text';
+      var en = 'Vertical 9:16 short-form video, ' + f.en.replace(/\{p\}/g, subj) +
+        ', natural color grade, shot on 35mm, 4k, no text';
       var ko = f.shot + ' — ' + f.ko;
       return {
         idx: idx + 1, label: f.label, name: f.name, start: start, end: end,

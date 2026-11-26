@@ -51,6 +51,13 @@
     return String(text || '').split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
   }
   function oneLine(text) { return String(text || '').replace(/\s+/g, ' ').trim(); }
+  function josa(word, withBatchim, withoutBatchim) {
+    var s = String(word == null ? '' : word).trim();
+    if (!s) return withoutBatchim;
+    var c = s.charCodeAt(s.length - 1);
+    if (c < 0xAC00 || c > 0xD7A3) return withoutBatchim;
+    return ((c - 0xAC00) % 28) ? withBatchim : withoutBatchim;
+  }
 
   /* ---------- storage ---------- */
   var Store = {
@@ -170,7 +177,7 @@
         '<span class="ico" aria-hidden="true">' + m.emoji + '</span>' +
         '<span class="body"><span class="name">' + esc(m.name) + '</span>' +
         '<span class="desc">' + esc(m.desc) + '</span></span>' +
-        '<span class="foot">' + (m.free ? '<span class="free">무료</span>' : '<span class="small muted">' + esc(m.tag || '') + '</span>') +
+        '<span class="foot">' + (m.free ? '<span class="free">무료</span>' : '') +
         '<span class="arrow" aria-hidden="true">›</span></span>' +
         '</button>';
     }).join('');
@@ -309,7 +316,7 @@
   App.store = Store;
   App.helpers = {
     $: $, $$: $$, pick: pick, shuffle: shuffle, randInt: randInt,
-    lines: lines, oneLine: oneLine, won: won, nowStamp: nowStamp, pad2: pad2, uid: uid, clamp: clamp
+    lines: lines, oneLine: oneLine, won: won, nowStamp: nowStamp, pad2: pad2, uid: uid, clamp: clamp, josa: josa
   };
   window.App = App;
 

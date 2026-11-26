@@ -52,6 +52,13 @@
     return String(text || '').split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
   }
   function oneLine(text) { return String(text || '').replace(/\s+/g, ' ').trim(); }
+  function josa(word, withBatchim, withoutBatchim) {
+    var s = String(word == null ? '' : word).trim();
+    if (!s) return withoutBatchim;
+    var c = s.charCodeAt(s.length - 1);
+    if (c < 0xAC00 || c > 0xD7A3) return withoutBatchim;
+    return ((c - 0xAC00) % 28) ? withBatchim : withoutBatchim;
+  }
 
   /* ---------- storage ---------- */
   var Store = {
@@ -171,7 +178,7 @@
         '<span class="ico" aria-hidden="true">' + m.emoji + '</span>' +
         '<span class="body"><span class="name">' + esc(m.name) + '</span>' +
         '<span class="desc">' + esc(m.desc) + '</span></span>' +
-        '<span class="foot">' + (m.free ? '<span class="free">무료</span>' : '<span class="small muted">' + esc(m.tag || '') + '</span>') +
+        '<span class="foot">' + (m.free ? '<span class="free">무료</span>' : '') +
         '<span class="arrow" aria-hidden="true">›</span></span>' +
         '</button>';
     }).join('');
@@ -310,7 +317,7 @@
   App.store = Store;
   App.helpers = {
     $: $, $$: $$, pick: pick, shuffle: shuffle, randInt: randInt,
-    lines: lines, oneLine: oneLine, won: won, nowStamp: nowStamp, pad2: pad2, uid: uid, clamp: clamp
+    lines: lines, oneLine: oneLine, won: won, nowStamp: nowStamp, pad2: pad2, uid: uid, clamp: clamp, josa: josa
   };
   window.App = App;
 
@@ -879,23 +886,29 @@
       tracked(ctx, slide.kicker, PAD, PAD + 8, 6);
 
       ctx.fillStyle = t.fg;
-      var size = 92, linesArr, y;
+      var size = 92, linesArr;
       do {
         ctx.font = font(800, size);
         linesArr = wrap(ctx, slide.title, W - PAD * 2);
         if (linesArr.length <= 4) break;
         size -= 4;
       } while (size > 52);
+      ctx.font = font(500, 36);
+      var subLines = wrap(ctx, slide.sub, W - PAD * 2 - 40);
+      var titleH = Math.min(linesArr.length, 5) * size * 1.24;
+      var blockH = titleH + 40 + Math.min(subLines.length, 3) * 54;
+      var y = Math.max(300, Math.min(470, (1350 - blockH) / 2 - 40));
+
       ctx.font = font(800, size);
-      y = 380;
+      ctx.fillStyle = t.fg;
       drawLines(ctx, linesArr, PAD, y, size * 1.24, 5);
 
-      var after = y + Math.min(linesArr.length, 5) * size * 1.24 + 34;
+      var after = y + titleH + 34;
       ctx.fillStyle = t.accent; ctx.fillRect(PAD, after, 86, 6);
 
       ctx.fillStyle = t.sub;
       ctx.font = font(500, 36);
-      drawLines(ctx, wrap(ctx, slide.sub, W - PAD * 2 - 40), PAD, after + 44, 54, 3);
+      drawLines(ctx, subLines, PAD, after + 44, 54, 3);
 
       // bottom
       ctx.fillStyle = t.line; ctx.fillRect(PAD, 1176, W - PAD * 2, 2);
@@ -919,24 +932,29 @@
       ctx.textAlign = 'left';
 
       ctx.fillStyle = t.fg;
-      var hs = 74, hl;
+      var hs = 84, hl;
       do {
         ctx.font = font(800, hs);
         hl = wrap(ctx, slide.title, W - PAD * 2);
         if (hl.length <= 4) break;
         hs -= 3;
       } while (hs > 46);
+      ctx.font = font(500, 42);
+      var bodyLines = wrap(ctx, slide.body, W - PAD * 2 - 30);
+      var blockH2 = Math.min(hl.length, 5) * hs * 1.26 + 40 + Math.min(bodyLines.length, 5) * 58;
+      var hy = Math.max(300, Math.min(470, (1350 - blockH2) / 2 - 30));
+
+      ctx.fillStyle = t.accent;
+      ctx.fillRect(PAD, hy - 44, 64, 6);
+
       ctx.font = font(800, hs);
-      var hy = 400;
+      ctx.fillStyle = t.fg;
       drawLines(ctx, hl, PAD, hy, hs * 1.26, 5);
 
       var by = hy + Math.min(hl.length, 5) * hs * 1.26 + 40;
       ctx.fillStyle = t.sub;
-      ctx.font = font(500, 38);
-      drawLines(ctx, wrap(ctx, slide.body, W - PAD * 2 - 30), PAD, by, 58, 5);
-
-      ctx.fillStyle = t.accent;
-      roundRect(ctx, PAD, by + 320, 12, 12, 6); ctx.fill();
+      ctx.font = font(500, 42);
+      drawLines(ctx, bodyLines, PAD, by, 58, 5);
 
       ctx.fillStyle = t.line; ctx.fillRect(PAD, 1176, W - PAD * 2, 2);
       ctx.fillStyle = t.sub; ctx.font = font(700, 30);
@@ -1109,7 +1127,7 @@
     var empathy = [
       '👀 ' + topic + ', 저도 똑같이 고민했어요.',
       '',
-      tg + '이라면 한 번쯤 겪어봤을 그 상황.',
+      tg + H.josa(tg, '이라면', '라면') + ' 한 번쯤 겪어봤을 그 상황.',
       '',
       topic + ' 때문에 이것저것 알아보다 보면',
       '정보는 많은데 뭐가 맞는지 모르겠죠.',
@@ -1336,7 +1354,7 @@
             '<div class="actions" style="margin-top:10px"><button class="btn btn-ghost btn-sm" type="button" id="lo-clear">이력 전체 삭제</button></div>' +
             '<div id="lo-hist" style="margin-top:10px"></div>' +
           '</section></div>' +
-          '<div class="stack"><section class="panel"><h3>🎉 이번 추첨 <span class="pill" id="lo-round">1회</span></h3>' +
+          '<div class="stack"><section class="panel"><h3>🎉 이번 추첨 <span class="pill" id="lo-round">—</span></h3>' +
             '<div id="lo-games" style="margin-top:12px"><div class="empty"><b>아직 뽑은 번호가 없어요</b>왼쪽에서 조건을 정하고 5게임 뽑기를 눌러주세요.</div></div>' +
             '<div class="actions"><button class="btn btn-soft" type="button" id="lo-copy">번호 복사</button>' +
             '<button class="btn btn-line" type="button" id="lo-save">이력에 저장</button></div>' +
@@ -1457,11 +1475,11 @@
   var H = App.helpers, esc = App.esc;
 
   var FRAMES = [
-    { name: '훅', label: 'HOOK', len: 3, shot: '정면 클로즈업', en: 'extreme close-up, product held toward camera, eyes to lens', ko: '제품을 카메라 쪽으로 들고 정면을 바라보는 클로즈업' },
+    { name: '훅', label: 'HOOK', len: 3, shot: '정면 클로즈업', en: 'extreme close-up of {p} held toward camera, eyes to lens', ko: '제품을 카메라 쪽으로 들고 정면을 바라보는 클로즈업' },
     { name: '문제', label: 'PROBLEM', len: 4, shot: '일상 공간 미디엄샷', en: 'medium shot in a cluttered home, frustrated expression, handheld', ko: '어수선한 집 안, 답답한 표정의 미디엄샷, 핸드헬드' },
-    { name: '해결', label: 'SOLUTION', len: 5, shot: '제품 사용 장면', en: 'smooth product-in-use shot, slow push-in, soft daylight', ko: '제품을 사용하는 장면, 천천히 다가가는 카메라, 부드러운 자연광' },
+    { name: '해결', label: 'SOLUTION', len: 5, shot: '제품 사용 장면', en: 'smooth shot of {p} in use, slow push-in, soft daylight', ko: '제품을 사용하는 장면, 천천히 다가가는 카메라, 부드러운 자연광' },
     { name: '증거', label: 'PROOF', len: 4, shot: '비포·애프터 대비', en: 'split-screen before and after, clean composition, top light', ko: '비포·애프터 분할 화면, 깔끔한 구도, 상단 조명' },
-    { name: '반전/포인트', label: 'TWIST', len: 3, shot: '디테일 인서트', en: 'macro insert shot of a detail, shallow depth of field', ko: '디테일 매크로 인서트, 얕은 심도' },
+    { name: '반전/포인트', label: 'TWIST', len: 3, shot: '디테일 인서트', en: 'macro insert shot of a product detail, shallow depth of field', ko: '디테일 매크로 인서트, 얕은 심도' },
     { name: 'CTA', label: 'CTA', len: 3, shot: '텍스트 오버레이 엔드카드', en: 'clean end card with space for text overlay, brand color background', ko: '텍스트를 얹을 여백이 있는 엔드카드, 브랜드 컬러 배경' }
   ];
 
@@ -1501,7 +1519,7 @@
   function fill(tpl, topic) { return String(tpl).replace(/\{t\}/g, topic); }
 
   function build(topic, productEn, target, cuts) {
-    var plan = FRAMES.slice(0, cuts);
+    var plan = cuts >= 6 ? FRAMES.slice(0, 6) : FRAMES.slice(0, Math.max(2, cuts - 1)).concat([FRAMES[5]]);
     var total = 0, i;
     for (i = 0; i < plan.length; i++) total += plan[i].len;
     var t = 0;
@@ -1510,9 +1528,10 @@
       t = end;
       var key = f.label.toLowerCase();
       var line = fill(H.pick(SCRIPTS[key] || SCRIPTS.solution), topic);
+      if (f.label === 'CTA' && target) line = target + '께 필요한 정보만 정리해뒀어요. 프로필 링크 확인해 주세요.';
       var subj = productEn || 'the product';
-      var en = 'Vertical 9:16 short-form video, ' + f.en.replace('product', subj) +
-        ', ' + (target ? target + ', ' : '') + 'natural color grade, shot on 35mm, 4k, no text';
+      var en = 'Vertical 9:16 short-form video, ' + f.en.replace(/\{p\}/g, subj) +
+        ', natural color grade, shot on 35mm, 4k, no text';
       var ko = f.shot + ' — ' + f.ko;
       return {
         idx: idx + 1, label: f.label, name: f.name, start: start, end: end,
@@ -1704,7 +1723,7 @@
       review: [
         '안녕하세요, ' + nk + '입니다.',
         '',
-        t + '을(를) 지난달에 직접 돈 주고 샀습니다.',
+        t + H.josa(t, '을', '를') + ' 지난달에 직접 돈 주고 샀습니다.',
         '광고가 아니라 제 돈으로 산 후기라서 좋았던 점과 아쉬웠던 점을 같이 적어봅니다.',
         '',
         '■ 좋았던 점',
@@ -2087,6 +2106,10 @@
     var avg = sentences.length ? Math.round(sentences.reduce(function (a, s) { return a + s.length; }, 0) / sentences.length) : 0;
     var longParas = linesArr.filter(function (l) { return l.length > 220; }).length;
     var headline = linesArr[0] || '';
+    if (headline.length > 80) {
+      var firstSentence = trimmed.split(/[.!?。！？\n]/)[0].trim();
+      if (firstSentence.length >= 6) headline = firstSentence;
+    }
     var firstChunk = trimmed.slice(0, 300);
 
     var cta = countWords(trimmed, CTA_WORDS);

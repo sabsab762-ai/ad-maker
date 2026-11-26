@@ -77,7 +77,7 @@
             '<div class="actions" style="margin-top:10px"><button class="btn btn-ghost btn-sm" type="button" id="lo-clear">이력 전체 삭제</button></div>' +
             '<div id="lo-hist" style="margin-top:10px"></div>' +
           '</section></div>' +
-          '<div class="stack"><section class="panel"><h3>🎉 이번 추첨 <span class="pill" id="lo-round">1회</span></h3>' +
+          '<div class="stack"><section class="panel"><h3>🎉 이번 추첨 <span class="pill" id="lo-round">—</span></h3>' +
             '<div id="lo-games" style="margin-top:12px"><div class="empty"><b>아직 뽑은 번호가 없어요</b>왼쪽에서 조건을 정하고 5게임 뽑기를 눌러주세요.</div></div>' +
             '<div class="actions"><button class="btn btn-soft" type="button" id="lo-copy">번호 복사</button>' +
             '<button class="btn btn-line" type="button" id="lo-save">이력에 저장</button></div>' +

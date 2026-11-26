@@ -127,23 +127,29 @@
       tracked(ctx, slide.kicker, PAD, PAD + 8, 6);
 
       ctx.fillStyle = t.fg;
-      var size = 92, linesArr, y;
+      var size = 92, linesArr;
       do {
         ctx.font = font(800, size);
         linesArr = wrap(ctx, slide.title, W - PAD * 2);
         if (linesArr.length <= 4) break;
         size -= 4;
       } while (size > 52);
+      ctx.font = font(500, 36);
+      var subLines = wrap(ctx, slide.sub, W - PAD * 2 - 40);
+      var titleH = Math.min(linesArr.length, 5) * size * 1.24;
+      var blockH = titleH + 40 + Math.min(subLines.length, 3) * 54;
+      var y = Math.max(300, Math.min(470, (1350 - blockH) / 2 - 40));
+
       ctx.font = font(800, size);
-      y = 380;
+      ctx.fillStyle = t.fg;
       drawLines(ctx, linesArr, PAD, y, size * 1.24, 5);
 
-      var after = y + Math.min(linesArr.length, 5) * size * 1.24 + 34;
+      var after = y + titleH + 34;
       ctx.fillStyle = t.accent; ctx.fillRect(PAD, after, 86, 6);
 
       ctx.fillStyle = t.sub;
       ctx.font = font(500, 36);
-      drawLines(ctx, wrap(ctx, slide.sub, W - PAD * 2 - 40), PAD, after + 44, 54, 3);
+      drawLines(ctx, subLines, PAD, after + 44, 54, 3);
 
       // bottom
       ctx.fillStyle = t.line; ctx.fillRect(PAD, 1176, W - PAD * 2, 2);
@@ -167,24 +173,29 @@
       ctx.textAlign = 'left';
 
       ctx.fillStyle = t.fg;
-      var hs = 74, hl;
+      var hs = 84, hl;
       do {
         ctx.font = font(800, hs);
         hl = wrap(ctx, slide.title, W - PAD * 2);
         if (hl.length <= 4) break;
         hs -= 3;
       } while (hs > 46);
+      ctx.font = font(500, 42);
+      var bodyLines = wrap(ctx, slide.body, W - PAD * 2 - 30);
+      var blockH2 = Math.min(hl.length, 5) * hs * 1.26 + 40 + Math.min(bodyLines.length, 5) * 58;
+      var hy = Math.max(300, Math.min(470, (1350 - blockH2) / 2 - 30));
+
+      ctx.fillStyle = t.accent;
+      ctx.fillRect(PAD, hy - 44, 64, 6);
+
       ctx.font = font(800, hs);
-      var hy = 400;
+      ctx.fillStyle = t.fg;
       drawLines(ctx, hl, PAD, hy, hs * 1.26, 5);
 
       var by = hy + Math.min(hl.length, 5) * hs * 1.26 + 40;
       ctx.fillStyle = t.sub;
-      ctx.font = font(500, 38);
-      drawLines(ctx, wrap(ctx, slide.body, W - PAD * 2 - 30), PAD, by, 58, 5);
-
-      ctx.fillStyle = t.accent;
-      roundRect(ctx, PAD, by + 320, 12, 12, 6); ctx.fill();
+      ctx.font = font(500, 42);
+      drawLines(ctx, bodyLines, PAD, by, 58, 5);
 
       ctx.fillStyle = t.line; ctx.fillRect(PAD, 1176, W - PAD * 2, 2);
       ctx.fillStyle = t.sub; ctx.font = font(700, 30);

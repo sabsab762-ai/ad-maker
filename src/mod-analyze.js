@@ -27,6 +27,10 @@
     var avg = sentences.length ? Math.round(sentences.reduce(function (a, s) { return a + s.length; }, 0) / sentences.length) : 0;
     var longParas = linesArr.filter(function (l) { return l.length > 220; }).length;
     var headline = linesArr[0] || '';
+    if (headline.length > 80) {
+      var firstSentence = trimmed.split(/[.!?。！？\n]/)[0].trim();
+      if (firstSentence.length >= 6) headline = firstSentence;
+    }
     var firstChunk = trimmed.slice(0, 300);
 
     var cta = countWords(trimmed, CTA_WORDS);
