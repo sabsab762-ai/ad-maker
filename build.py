@@ -8,6 +8,8 @@ ORDER = [
     'core.js',
     'saju-core.js',
     'quiz-core.js',
+    'daily-core.js',
+    'tarot-core.js',
     'mod-danggeun.js',
     'mod-insta.js',
     'mod-thread.js',
@@ -19,6 +21,8 @@ ORDER = [
     'mod-detail.js',
     'mod-saju.js',
     'mod-quiz.js',
+    'mod-daily.js',
+    'mod-tarot.js',
     'init.js',
 ]
 
