@@ -129,10 +129,11 @@
     var fam = fontCss(st.fontKey);
     var scale = st.scale / 100;
     var accent = st.accent || sy.accent;
-    var titleCol = st.titleColor || sy.fg;
+    var titleCol = st.titleColor || (onPhoto ? '#FFFFFF' : sy.fg);
     var bodyCol = st.bodyColor || sy.fg;
     var photo = opt.photo || null;
     var usePhoto = photo && (slide.kind !== 'cta');
+    var onPhoto = usePhoto && slide.kind === 'cover';
 
     /* 배경 */
     if (sy.deco === 'card') {
@@ -331,7 +332,7 @@
       box.innerHTML = '<div class="empty"><b>아직 만든 카드뉴스가 없어요</b>왼쪽에 글을 넣고 <b>캐러셀 만들기</b>를 눌러 주세요.</div>';
       return;
     }
-    var cur = st.cur;
+    var cur = Math.min(st.cur, st.canvases.length - 1);
     box.innerHTML =
       '<div style="display:flex;justify-content:center"><img src="' + st.canvases[cur].toDataURL('image/png') + '" alt="' + (cur + 1) + '번 슬라이드" ' +
         'style="max-width:100%;max-height:520px;border-radius:12px;border:1px solid var(--line);background:#fff"></div>' +
@@ -393,7 +394,7 @@
     desc: '블로그 글·상세페이지를 넣으면 사진 카드뉴스로. 비율·글꼴·강조색까지 조절.',
     help: '블로그 글을 넣거나 상품 보관함에서 불러오면 표지·본문·CTA 슬라이드를 자동으로 나눠 1080px PNG로 만들어 줍니다. 사진 비율(1:1·4:5·3:4·9:16), 글자 모양(카드뉴스·기본·깔끔·손글씨·노랑 강조), 강조색·글꼴·크기·테두리·그림자를 조절하고 장마다 저장할 수 있습니다.',
     render: function (root) {
-      st.slides = []; st.canvases = []; st.photos = []; st.cur = 0;
+      st.slides = []; st.canvases = []; st.photos = []; st.cur = 0; st.product = null;
       var saved = A.products.list();
       var pickId = S.get('pick', null);
       if (pickId) {

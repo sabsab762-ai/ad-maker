@@ -43,170 +43,188 @@
     return size;
   }
 
+  function cardPrice(price) {
+    if (!price) return '';
+    var v = String(price);
+    if (v.indexOf(' ~ ') !== -1) {
+      var a = v.split(' ~ ')[0];
+      return a + (/(원)$/.test(a) ? '부터' : '');
+    }
+    return v;
+  }
+
   function paint(p, opt) {
     opt = opt || {};
-    var W = opt.w || 1080, Hh = opt.h || 1080;
+    var W = 1080, Hh = 1080;
     var cv = document.createElement('canvas');
     cv.width = W; cv.height = Hh;
     var ctx = cv.getContext('2d');
     var C = A.canvas;
     var variant = opt.variant || 'carrot';
     var title = opt.title || p.title;
-    var price = p.price || '';
+    var price = cardPrice(p.price);
     var ben = (p.benefits || []).filter(function (b) { return !/찾지 못했/.test(b); })[0] || '';
     ben = A.trimPunct(ben).replace(/^[·・\-]\s*/, '');
     var photo = opt.photo || null;
     var dong = (st.dong || '').trim();
+    var adult = ['렌탈·타이어', '주류', '담배', '도박'];
+    if (adult.indexOf(p.category) !== -1) { /* 업종 표기만 유지 */ }
 
+    /* ---------- 배경 ---------- */
     if (variant === 'photo' && photo) {
       C.cover(ctx, photo, 0, 0, W, Hh);
-      var gr = ctx.createLinearGradient(0, Hh * 0.35, 0, Hh);
+      var gr = ctx.createLinearGradient(0, Hh * 0.3, 0, Hh);
       gr.addColorStop(0, 'rgba(0,0,0,0)');
-      gr.addColorStop(0.55, 'rgba(0,0,0,.55)');
-      gr.addColorStop(1, 'rgba(0,0,0,.86)');
-      ctx.fillStyle = gr; ctx.fillRect(0, Hh * 0.35, W, Hh * 0.65);
+      gr.addColorStop(0.5, 'rgba(0,0,0,.52)');
+      gr.addColorStop(1, 'rgba(0,0,0,.88)');
+      ctx.fillStyle = gr; ctx.fillRect(0, Hh * 0.3, W, Hh * 0.7);
     } else if (variant === 'dark') {
-      ctx.fillStyle = '#141418'; ctx.fillRect(0, 0, W, Hh);
-      var rg = ctx.createRadialGradient(W * 0.85, Hh * 0.1, 30, W * 0.85, Hh * 0.1, W * 0.9);
-      rg.addColorStop(0, 'rgba(99,56,245,.5)');
+      ctx.fillStyle = '#15151C'; ctx.fillRect(0, 0, W, Hh);
+      var rg = ctx.createRadialGradient(W * 0.82, Hh * 0.12, 30, W * 0.82, Hh * 0.12, W * 0.85);
+      rg.addColorStop(0, 'rgba(99,56,245,.48)');
       rg.addColorStop(1, 'rgba(99,56,245,0)');
       ctx.fillStyle = rg; ctx.fillRect(0, 0, W, Hh);
     } else if (variant === 'clean') {
       ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, Hh);
-      ctx.fillStyle = '#6338F5'; ctx.fillRect(0, 0, W, 16);
-      ctx.fillStyle = '#F4F1FF'; ctx.fillRect(0, Hh - 150, W, 150);
+      ctx.fillStyle = '#6338F5'; ctx.fillRect(0, 0, W, 14);
+      ctx.fillStyle = '#F6F4FF'; ctx.fillRect(0, Hh - 150, W, 150);
     } else {
       var g = ctx.createLinearGradient(0, 0, W, Hh);
-      g.addColorStop(0, '#FF7A22'); g.addColorStop(1, '#F2540B');
+      g.addColorStop(0, '#FF7C26'); g.addColorStop(1, '#F04E07');
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, Hh);
-      ctx.globalAlpha = 0.12;
+      ctx.globalAlpha = 0.13;
       ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath(); ctx.arc(W * 0.86, Hh * 0.14, W * 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(W * 0.88, Hh * 0.10, W * 0.32, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
     }
 
     var dark = (variant === 'dark' || variant === 'photo');
-    var fg = dark ? '#FFFFFF' : (variant === 'clean' ? '#17171B' : '#FFFFFF');
-    var sub = dark ? 'rgba(255,255,255,.72)' : (variant === 'clean' ? '#6D6D7A' : 'rgba(255,255,255,.88)');
-    ctx.textBaseline = 'top';
+    var onWhite = (variant === 'clean');
+    var titleCol = dark ? '#FFFFFF' : (onWhite ? '#17171B' : '#FFFFFF');
+    var subCol = dark ? 'rgba(255,255,255,.74)' : (onWhite ? '#6D6D7A' : 'rgba(255,255,255,.9)');
+    var accentCol = onWhite ? '#FF6F0F' : (dark ? '#FFC24B' : '#FFF0A8');
+    ctx.textBaseline = 'top'; ctx.textAlign = 'left';
 
-    /* 상단 배지 */
+    /* ---------- 상단 배지 ---------- */
     var badge = dong ? dong + ' 이웃' : '동네 이웃';
-    ctx.font = '800 34px Pretendard, "Apple SD Gothic Neo", sans-serif';
-    var bw = ctx.measureText(badge).width + 44;
-    ctx.fillStyle = dark ? 'rgba(255,255,255,.16)' : (variant === 'clean' ? '#F1ECFF' : 'rgba(255,255,255,.22)');
-    C.roundRect(ctx, 72, 72, bw, 62, 31); ctx.fill();
-    ctx.fillStyle = variant === 'clean' ? '#4C24D6' : '#FFFFFF';
-    ctx.fillText(badge, 94, 87);
+    ctx.font = '800 30px Pretendard, "Apple SD Gothic Neo", sans-serif';
+    var bw = ctx.measureText(badge).width + 42;
+    ctx.fillStyle = onWhite ? '#F1ECFF' : (dark ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.24)');
+    C.roundRect(ctx, 64, 60, bw, 58, 29); ctx.fill();
+    ctx.fillStyle = onWhite ? '#4C24D6' : '#FFFFFF';
+    ctx.fillText(badge, 86, 74);
 
-    /* 상단 브랜드(검색광고형) */
     if (p.domain) {
-      ctx.font = '700 30px Pretendard, "Apple SD Gothic Neo", sans-serif';
-      ctx.fillStyle = sub; ctx.textAlign = 'right';
-      ctx.fillText(A.cut(p.domain, 26), W - 72, 92);
+      ctx.font = '700 26px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      ctx.fillStyle = dark ? 'rgba(255,255,255,.5)' : (onWhite ? '#B0B0BC' : 'rgba(255,255,255,.72)');
+      ctx.textAlign = 'right';
+      ctx.fillText(A.cut(p.domain, 24), W - 64, 76);
       ctx.textAlign = 'left';
     }
 
-    var y;
-    if (variant === 'dark') {
-      /* 큰 가격 */
-      if (price) {
-        ctx.font = '800 46px Pretendard, "Apple SD Gothic Neo", sans-serif';
-        ctx.fillStyle = sub; ctx.fillText('지금 조건', 72, 300);
-        var ps = fitFont(ctx, price, W - 144, 168, 56, 800);
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(price, 72, 360);
-        y = 360 + ps + 70;
-      } else {
-        y = 330;
-      }
-      ctx.font = '800 74px Pretendard, "Apple SD Gothic Neo", sans-serif';
-      var tl = C.wrap(ctx, title, W - 144);
-      y = C.drawLines(ctx, tl, 72, y, 92, 4);
-      y += 46;
-      ctx.font = '600 38px Pretendard, "Apple SD Gothic Neo", sans-serif';
-      ctx.fillStyle = sub;
-      var bl = C.wrap(ctx, ben || '자세한 조건은 프로필에서 확인하세요', W - 144);
-      C.drawLines(ctx, bl, 72, y, 56, 3);
-      ctx.fillStyle = '#6338F5'; ctx.fillRect(0, Hh - 132, W, 132);
-      ctx.fillStyle = '#FFFFFF'; ctx.font = '800 40px Pretendard, "Apple SD Gothic Neo", sans-serif';
-      ctx.fillText(st.button + '  →', 72, Hh - 92);
-    } else if (variant === 'clean') {
-      y = 210;
-      ctx.fillStyle = '#FF6F0F';
-      ctx.font = '800 40px Pretendard, "Apple SD Gothic Neo", sans-serif';
-      ctx.fillText(A.cut(p.category || '동네 광고', 20), 72, y - 60);
-      ctx.fillStyle = fg;
-      ctx.font = '800 84px Pretendard, "Apple SD Gothic Neo", sans-serif';
-      var tl2 = C.wrap(ctx, title, W - 144);
-      y = C.drawLines(ctx, tl2, 72, y, 104, 4);
-      if (price) {
-        y += 40;
-        ctx.fillStyle = '#17171B';
-        var ps2 = fitFont(ctx, price, W - 144, 104, 48, 800);
-        ctx.fillStyle = '#FF6F0F';
-        ctx.fillText(price, 72, y);
-        y += ps2 + 30;
-      }
-      if (ben) {
-        ctx.fillStyle = '#45454F';
-        ctx.font = '600 38px Pretendard, "Apple SD Gothic Neo", sans-serif';
-        C.drawLines(ctx, C.wrap(ctx, ben, W - 144), 72, y, 56, 3);
-      }
-      ctx.fillStyle = '#17171B'; ctx.font = '800 36px Pretendard, "Apple SD Gothic Neo", sans-serif';
-      ctx.fillText(st.button + ' →', 72, Hh - 88);
-    } else if (variant === 'photo' && photo) {
-      var ty = Hh - 430;
-      if (price) {
-        ctx.font = '800 40px Pretendard, "Apple SD Gothic Neo", sans-serif';
-        var pw = ctx.measureText(price).width + 56;
-        ctx.fillStyle = 'rgba(255,255,255,.92)';
-        C.roundRect(ctx, 72, ty - 96, pw, 72, 20); ctx.fill();
-        ctx.fillStyle = '#FF6F0F'; ctx.fillText(price, 100, ty - 76);
-      }
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '800 78px Pretendard, "Apple SD Gothic Neo", sans-serif';
-      var tl3 = C.wrap(ctx, title, W - 144);
-      y = C.drawLines(ctx, tl3, 72, ty, 94, 4);
-      if (ben) {
-        ctx.fillStyle = 'rgba(255,255,255,.82)';
-        ctx.font = '600 36px Pretendard, "Apple SD Gothic Neo", sans-serif';
-        C.drawLines(ctx, C.wrap(ctx, ben, W - 144), 72, y + 18, 52, 2);
-      }
-    } else {
-      /* carrot */
-      var by = 330;
-      ctx.fillStyle = 'rgba(255,255,255,.9)';
-      ctx.font = '700 36px Pretendard, "Apple SD Gothic Neo", sans-serif';
-      ctx.fillText(A.cut(p.category || '동네 혜택', 24), 72, by - 60);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '800 88px Pretendard, "Apple SD Gothic Neo", sans-serif';
-      var tl4 = C.wrap(ctx, title, W - 144);
-      y = C.drawLines(ctx, tl4, 72, by, 110, 4);
-      y += 34;
-      if (price) {
-        var ps3 = fitFont(ctx, price, W - 144, 120, 56, 800);
-        ctx.fillStyle = '#FFF3B0';
-        ctx.font = '800 ' + ps3 + 'px Pretendard, "Apple SD Gothic Neo", sans-serif';
-        ctx.fillText(price, 72, y);
-        y += ps3 + 22;
-      }
-      if (ben) {
-        ctx.fillStyle = 'rgba(255,255,255,.92)';
-        ctx.font = '600 38px Pretendard, "Apple SD Gothic Neo", sans-serif';
-        var bl2 = C.wrap(ctx, ben, W - 144);
-        y = C.drawLines(ctx, bl2, 72, y, 54, 3);
-      }
-      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(0, Hh - 122, W, 122);
-      ctx.fillStyle = '#FFFFFF'; ctx.font = '800 38px Pretendard, "Apple SD Gothic Neo", sans-serif';
-      ctx.fillText(st.button + '  →', 72, Hh - 86);
+    /* ---------- 본문 블록 계산 ---------- */
+    var padX = 76, maxW = W - padX * 2;
+    var topLimit = 190, bottomLimit = Hh - 210;
+    if (variant === 'clean') bottomLimit = Hh - 178;
+
+    var kick = onWhite ? A.cut(p.category || '동네 혜택', 18) : (dark ? '지금 조건' : A.cut(p.category || '동네 혜택', 18));
+    var kickSize = 32;
+
+    var tSize = 86, tLines;
+    var tText = A.cut(title, 46);
+    do {
+      ctx.font = '800 ' + tSize + 'px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      tLines = C.wrap(ctx, tText, maxW);
+      if (tLines.length <= 3) break;
+      tSize -= 4;
+    } while (tSize > 46);
+    tLines = tLines.slice(0, 3);
+    var tH = tLines.length * tSize * 1.18;
+
+    var pSize = 0, pH = 0;
+    if (price) {
+      pSize = 112;
+      do {
+        ctx.font = '800 ' + pSize + 'px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        if (ctx.measureText(price).width <= maxW) break;
+        pSize -= 6;
+      } while (pSize > 46);
+      pH = pSize * 1.1;
     }
 
-    /* 하단 안내 */
-    ctx.font = '600 26px Pretendard, "Apple SD Gothic Neo", sans-serif';
-    ctx.fillStyle = dark ? 'rgba(255,255,255,.5)' : (variant === 'clean' ? '#9C9CA8' : 'rgba(255,255,255,.72)');
+    var bLines = [], bH = 0;
+    if (ben) {
+      ctx.font = '600 34px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      bLines = C.wrap(ctx, A.cut(ben, 56), maxW).slice(0, 2);
+      bH = bLines.length * 46;
+    }
+
+    var gaps = 18 + (pSize ? 26 : 0) + (bLines.length ? 22 : 0);
+    var totalH = kickSize + gaps + tH + pH + bH;
+    var y = topLimit + Math.max(0, (bottomLimit - topLimit - totalH) / 2);
+
+    /* kicker */
+    ctx.font = '800 ' + kickSize + 'px Pretendard, "Apple SD Gothic Neo", sans-serif';
+    ctx.fillStyle = accentCol;
+    ctx.fillText(kick, padX, y);
+    y += kickSize + 18;
+
+    /* title */
+    ctx.font = '800 ' + tSize + 'px Pretendard, "Apple SD Gothic Neo", sans-serif';
+    ctx.fillStyle = titleCol;
+    for (var i = 0; i < tLines.length; i++) {
+      ctx.fillText(tLines[i], padX, y + i * tSize * 1.18);
+    }
+    y += tH;
+
+    /* price */
+    if (price) {
+      y += 26;
+      ctx.font = '800 ' + pSize + 'px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      if (!onWhite) {
+        ctx.save();
+        ctx.fillStyle = dark ? 'rgba(255,194,75,.16)' : 'rgba(255,255,255,.18)';
+        var pw = ctx.measureText(price).width;
+        C.roundRect(ctx, padX - 16, y - 8, pw + 32, pH + 8, 22); ctx.fill();
+        ctx.restore();
+      }
+      ctx.fillStyle = onWhite ? '#FF6F0F' : accentCol;
+      ctx.fillText(price, padX, y);
+      y += pH;
+    }
+
+    /* benefit */
+    if (bLines.length) {
+      y += 22;
+      ctx.font = '600 34px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      ctx.fillStyle = subCol;
+      for (var j = 0; j < bLines.length; j++) ctx.fillText(bLines[j], padX, y + j * 46);
+    }
+
+    /* ---------- 하단 CTA ---------- */
+    var ctaH = onWhite ? 128 : 116;
+    var ctaY = Hh - ctaH;
+    if (onWhite) {
+      ctx.fillStyle = '#F6F4FF'; ctx.fillRect(0, ctaY, W, ctaH);
+      ctx.fillStyle = '#6338F5';
+      C.roundRect(ctx, padX, ctaY + 30, W - padX * 2, 68, 34); ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+    } else if (variant === 'photo') {
+      ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0, ctaY, W, ctaH);
+      ctx.fillStyle = '#FFFFFF';
+    } else {
+      ctx.fillStyle = dark ? '#6338F5' : 'rgba(0,0,0,.26)';
+      ctx.fillRect(0, ctaY, W, ctaH);
+      ctx.fillStyle = '#FFFFFF';
+    }
+    ctx.font = '800 36px Pretendard, "Apple SD Gothic Neo", sans-serif';
+    ctx.fillText(st.button + '  →', padX + (onWhite ? 26 : 0), ctaY + (onWhite ? 46 : 40));
+
+    /* 하단 고지 */
+    ctx.font = '600 22px Pretendard, "Apple SD Gothic Neo", sans-serif';
+    ctx.fillStyle = dark ? 'rgba(255,255,255,.45)' : (onWhite ? '#B0B0BC' : 'rgba(255,255,255,.7)');
     ctx.textAlign = 'right';
-    ctx.fillText('광고 · 조건은 신청 페이지에서 확인', W - 72, Hh - (variant === 'clean' ? 46 : 46));
+    ctx.fillText('광고 · 조건은 신청 페이지에서 확인', W - 64, Hh - 34);
     ctx.textAlign = 'left';
     return cv;
   }
@@ -340,6 +358,7 @@
     renderSetup(box, via);
     renderResult(box);
     regenerate();
+    renderSetting();
   }
 
   function renderSetup(box, via) {
@@ -440,7 +459,7 @@
         '<div class="actions"><button class="btn btn-primary" type="button" id="dg-copyfinal">고른 제목 복사하기</button>' +
         '<button class="btn btn-soft" type="button" id="dg-regen">제목 다시 뽑기</button></div>' +
       '</section>' +
-      '<section class="panel"><h3>🖼 광고 이미지 <span class="pill">' + st.creatives.length + '</span></h3>' +
+      '<section class="panel"><h3>🖼 광고 이미지 <span class="pill" id="dg-ccount">' + st.creatives.length + '</span></h3>' +
         '<p class="psub">당근 규격 1080×1080 PNG. 세트마다 제목과 디자인을 다르게 만들어 A/B 테스트에 쓰세요.</p>' +
         '<div class="creatives" id="dg-creatives" style="margin-top:12px"></div>' +
         '<div class="actions"><button class="btn btn-soft btn-block" type="button" id="dg-allpng">이미지 전체 다운로드</button></div>' +
@@ -554,6 +573,10 @@
     renderCreativeGrid();
     updateFeed();
     renderReview();
+    if (els.right) {
+      var c = H.$('#dg-ccount', els.right);
+      if (c) c.textContent = st.creatives.length;
+    }
   }
 
   function renderCreativeGrid() {

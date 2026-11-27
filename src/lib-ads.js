@@ -289,7 +289,9 @@
 
   function shortTitle(title, fallback) {
     var t = String(title || '').replace(/\[[^\]]*\]|\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
-    t = t.split(/\s*[|｜]\s*/)[0].split(/\s*[-–—]\s*(?:공식|쇼핑몰|스토어|네이버|쿠팡|공식몰)/)[0];
+    t = t.split(/\s*[|｜]\s*/)[0];
+    t = t.split(/\s*[—–]\s*/)[0];
+    t = t.split(/\s+-\s+/)[0];
     t = t.replace(/(공식몰|공식 스토어|공식스토어|스마트스토어|온라인 스토어|쇼핑몰)$/g, '').trim();
     if (!t) t = String(fallback || '').trim();
     return cut(t, 40);
@@ -349,7 +351,9 @@
       var v = cleanBenefit(s);
       if (v.length < 6) return;
       for (var i = 0; i < benefitLines.length; i++) {
-        if (benefitLines[i].slice(0, 10) === v.slice(0, 10)) return;
+        var prev = benefitLines[i];
+        if (prev.slice(0, 10) === v.slice(0, 10)) return;
+        if (prev.indexOf(v) !== -1 || v.indexOf(prev) !== -1) return;
       }
       benefitLines.push(v);
     });
@@ -587,7 +591,12 @@
   ];
   function bannedCheck(text) {
     var s = String(text || ''), out = [];
-    BANNED.forEach(function (b) { if (s.indexOf(b.w) !== -1) out.push(b); });
+    var SKIP = { '최고': /최고급/, '1위': /1위\s*(고객|브랜드)?\s*선정/, '보장': /보장(금|제도)/, '확실': /확실(성|히)/ };
+    BANNED.forEach(function (b) {
+      if (s.indexOf(b.w) === -1) return;
+      if (SKIP[b.w] && SKIP[b.w].test(s) && s.replace(SKIP[b.w], '').indexOf(b.w) === -1) return;
+      out.push(b);
+    });
     return out;
   }
 
@@ -634,13 +643,13 @@
       out.push({ text: t, formula: formula, chars: t.length });
     }
     if (pr) add(s + ' ' + pr + '부터', '가격형');
-    if (bn) add(s + ', ' + bn, '혜택형');
+    if (bn) add(s + ', ' + cut(bn, Math.max(8, 28 - s.length)), '혜택형');
     add(dong + ' ' + s, '동네명형');
     if (pr) add(dong + ' ' + s + ' ' + pr, '동네·가격형');
     add(s + ', 이거 얼마인지 아세요?', '질문형');
     if (bn) add(s + ' 이렇게까지 됩니다', '반전형');
     add('이번 주까지 ' + s, '기간형');
-    if (bn) add(s + ' ' + bn + ' 챙기세요', '혜택·행동형');
+    if (bn) add(s + ' ' + cut(bn, Math.max(6, 24 - s.length)) + ' 챙기세요', '혜택·행동형');
     add(s + ' 고민이면 3분만 보세요', '시간 약속형');
     if (pr) add(s + ' ' + pr + '이면 충분합니다', '가격 안심형');
     add(s + ' 비교하고 오세요', '비교형');
