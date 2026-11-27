@@ -204,9 +204,15 @@
     ctx.fillStyle = '#4B5A85';
     ctx.fillText('축하합니다', 100, cardY + 246);
     ctx.textAlign = 'right';
-    ctx.font = '800 56px Pretendard, "Apple SD Gothic Neo", sans-serif';
+    var totalTxt = total ? '총 ' + A.won(Math.round(totalShow)) + '원' : '당첨 없음';
+    var tsz = 56;
+    do {
+      ctx.font = '800 ' + tsz + 'px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      if (ctx.measureText(totalTxt).width <= W - 300) break;
+      tsz -= 4;
+    } while (tsz > 30);
     ctx.fillStyle = total ? '#FF6F0F' : '#B0B0BC';
-    ctx.fillText(total ? '총 ' + A.won(Math.round(totalShow)) + '원' : '당첨 없음', W - 100, cardY + 232);
+    ctx.fillText(totalTxt, W - 100, cardY + 246);
     ctx.textAlign = 'left';
 
     /* 응모 줄 */
@@ -250,17 +256,24 @@
 
       /* 우측 등수/금액 */
       ctx.textAlign = 'right';
+      var ax = rr.x + rr.w - 26, avail = rr.w * 0.34;
       if (win) {
-        ctx.font = '800 30px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        var amtTxt = A.wonAuto(prizeOf(r, row.rank));
+        var asz = 30;
+        do {
+          ctx.font = '800 ' + asz + 'px Pretendard, "Apple SD Gothic Neo", sans-serif';
+          if (ctx.measureText(amtTxt).width <= avail) break;
+          asz -= 2;
+        } while (asz > 18);
         ctx.fillStyle = '#FF6F0F';
-        ctx.fillText(A.wonAuto(prizeOf(r, row.rank)), rr.x + rr.w - 26, rr.y + 44);
-        ctx.font = '700 24px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        ctx.fillText(amtTxt, ax, rr.y + 42);
+        ctx.font = '700 22px Pretendard, "Apple SD Gothic Neo", sans-serif';
         ctx.fillStyle = '#8A90A6';
-        ctx.fillText(matched(r, row.nums) + '개 일치', rr.x + rr.w - 26, rr.y + 84);
+        ctx.fillText(matched(r, row.nums) + '개 일치', ax, rr.y + 84);
       } else {
-        ctx.font = '700 28px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        ctx.font = '700 26px Pretendard, "Apple SD Gothic Neo", sans-serif';
         ctx.fillStyle = '#B0B0BC';
-        ctx.fillText(st.mode === 'analysis' ? matched(r, row.nums) + '개 일치' : '낙첨', rr.x + rr.w - 26, rr.y + 52);
+        ctx.fillText(st.mode === 'analysis' ? matched(r, row.nums) + '개 일치' : '낙첨', ax, rr.y + 56);
       }
       ctx.textAlign = 'left';
     });
@@ -275,13 +288,21 @@
     /* 자막 */
     if (st.caption && t > 0.55) {
       var ct = Math.min(1, (t - 0.55) / 0.18);
-      var capY = Hh - 300;
-      var fam = (FONT_MAP[st.cfont] || FONT_MAP['고딕']).replace('%s', Math.round(st.csize) + 'px');
+      var capY = Hh - 210;
+      var csize = st.csize;
+      var fam = (FONT_MAP[st.cfont] || FONT_MAP['고딕']).replace('%s', Math.round(csize) + 'px');
       ctx.font = fam;
       ctx.textAlign = 'center';
       var maxW = W - 140;
       var lines = C.wrap(ctx, st.caption, maxW);
-      var lineH = st.csize * 1.2;
+      while (lines.length > 2 && csize > 52) {
+        csize -= 6;
+        fam = (FONT_MAP[st.cfont] || FONT_MAP['고딕']).replace('%s', Math.round(csize) + 'px');
+        ctx.font = fam;
+        lines = C.wrap(ctx, st.caption, maxW);
+      }
+      lines = lines.slice(0, 2);
+      var lineH = csize * 1.2;
       var totalH = lines.length * lineH;
       var tx = W / 2, ty = capY - totalH / 2;
 
