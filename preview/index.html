@@ -6423,7 +6423,7 @@ var LOTTO_DATA = [{"no":1251,"date":"2026-11-21","n":[14,18,19,29,40,45],"b":1,"
       updateProgress(t);
       if (t < 1) requestAnimationFrame(frame);
       else {
-        setTimeout(function () { try { rec.stop(); } catch (e) {} st.playing = false; paintStatic(); renderPreview(); }, 300);
+        setTimeout(function () { try { rec.stop(); } catch (e) {} st.playing = false; paintStatic(); renderPreview(studioRoot); }, 300);
       }
     }
     requestAnimationFrame(frame);
@@ -6443,12 +6443,12 @@ var LOTTO_DATA = [{"no":1251,"date":"2026-11-21","n":[14,18,19,29,40,45],"b":1,"
       drawFrame(ctx, cv.width, cv.height, t);
       updateProgress(t);
       if (t < 1) requestAnimationFrame(frame);
-      else { st.playing = false; renderPreview(); }
+      else { st.playing = false; paintStatic(); renderPreview(studioRoot); }
     }
     requestAnimationFrame(frame);
   }
   function updateProgress(t) {
-    var bar = document.getElementById('lo-bar');
+    var bar = studioRoot ? H.$('#lo-bar', studioRoot) : document.getElementById('lo-bar');
     if (bar) bar.style.width = Math.round(t * 100) + '%';
   }
 
@@ -6485,6 +6485,7 @@ var LOTTO_DATA = [{"no":1251,"date":"2026-11-21","n":[14,18,19,29,40,45],"b":1,"
 
   /* ---------------- 스튜디오 ---------------- */
   function renderStudio(body) {
+    studioRoot = body;
     var r = current();
     var opts = DATA.map(function (x) {
       return '<option value="' + x.no + '"' + (x.no === Number(st.roundNo) ? ' selected' : '') + '>제' + x.no + '회 · ' + x.date + (x === DATA[0] ? ' (최근)' : '') + '</option>';
@@ -6560,12 +6561,14 @@ var LOTTO_DATA = [{"no":1251,"date":"2026-11-21","n":[14,18,19,29,40,45],"b":1,"
 
     renderRows(body);
     paintStatic();
-    renderPreview();
+    renderPreview(body);
     bindStudio(body);
   }
 
-  function renderPreview() {
-    var img = document.getElementById('lo-preview');
+  var studioRoot = null;
+  function renderPreview(root) {
+    var host = root || studioRoot || document;
+    var img = H.$('#lo-preview', host);
     if (!img) return;
     var cv = st.canvases.main || paintStatic();
     img.src = cv.toDataURL('image/png');
@@ -6596,7 +6599,7 @@ var LOTTO_DATA = [{"no":1251,"date":"2026-11-21","n":[14,18,19,29,40,45],"b":1,"
       H.$('.tkt .win', body).innerHTML = r.n.map(function (n) { return '<span class="ball2 ' + ballClass(n) + '">' + n + '</span>'; }).join('') +
         '<span style="color:#9C9CA8;font-weight:800">+</span><span class="ball2" style="background:#C9C9D6">' + r.b + '</span>' +
         '<span style="margin-left:auto;font-size:10.5px;color:var(--muted);font-weight:800">1등 ' + A.wonAuto(r.p[0]) + '</span>';
-      renderRows(body); paintStatic(); renderPreview();
+      renderRows(body); paintStatic(); renderPreview(body);
     });
     H.$('#lo-manual', body).addEventListener('click', function () {
       var b = H.$('#lo-manualbox', body);
@@ -6609,70 +6612,70 @@ var LOTTO_DATA = [{"no":1251,"date":"2026-11-21","n":[14,18,19,29,40,45],"b":1,"
       st.manual = true;
       st.nums = nums.slice(0, 6).sort(function (a, b) { return a - b; });
       st.bonus = nums[6];
-      renderRows(body); paintStatic(); renderPreview();
+      renderRows(body); paintStatic(); renderPreview(body);
       App.toast('당첨번호를 적용했어요.');
     });
     H.$('#lo-mode', body).addEventListener('click', function (e) {
       var b = e.target.closest('[data-mode]'); if (!b) return;
       st.mode = b.getAttribute('data-mode');
       H.$$('#lo-mode button', body).forEach(function (x) { x.classList.toggle('on', x === b); });
-      paintStatic(); renderPreview();
+      paintStatic(); renderPreview(body);
     });
     H.$('#lo-rows', body).addEventListener('click', function (e) {
       var b = e.target.closest('[data-rank]'); if (!b) return;
       var i = Number(b.getAttribute('data-row'));
       if (!st.rows[i]) return;
       st.rows[i].rank = b.getAttribute('data-rank');
-      renderRows(body); paintStatic(); renderPreview();
+      renderRows(body); paintStatic(); renderPreview(body);
     });
     H.$('#lo-cap', body).addEventListener('input', function () {
       st.caption = this.value;
-      paintStatic(); renderPreview();
+      paintStatic(); renderPreview(body);
     });
     H.$('#lo-dur', body).addEventListener('change', function () { st.dur = Number(this.value); });
     H.$('#lo-eff', body).addEventListener('click', function (e) {
       var b = e.target.closest('[data-eff]'); if (!b) return;
       st.effect = b.getAttribute('data-eff');
       H.$$('#lo-eff .chip', body).forEach(function (x) { x.classList.toggle('on', x === b); });
-      paintStatic(); renderPreview();
+      paintStatic(); renderPreview(body);
     });
     H.$('#lo-sty', body).addEventListener('click', function (e) {
       var b = e.target.closest('[data-sty]'); if (!b) return;
       st.cstyle = b.getAttribute('data-sty');
       H.$$('#lo-sty .chip', body).forEach(function (x) { x.classList.toggle('on', x === b); });
-      paintStatic(); renderPreview();
+      paintStatic(); renderPreview(body);
     });
     H.$('#lo-col', body).addEventListener('click', function (e) {
       var b = e.target.closest('[data-col]'); if (!b) return;
       st.ccolor = b.getAttribute('data-col');
       H.$$('#lo-col .sw', body).forEach(function (x) { x.classList.toggle('on', x === b); });
-      paintStatic(); renderPreview();
+      paintStatic(); renderPreview(body);
     });
     H.$('#lo-font', body).addEventListener('click', function (e) {
       var b = e.target.closest('[data-font]'); if (!b) return;
       st.cfont = b.getAttribute('data-font');
       H.$$('#lo-font .chip', body).forEach(function (x) { x.classList.toggle('on', x === b); });
-      paintStatic(); renderPreview();
+      paintStatic(); renderPreview(body);
     });
     H.$('#lo-csize', body).addEventListener('input', function () {
       st.csize = Number(this.value);
       this.parentNode.querySelector('.vl').textContent = st.csize;
-      paintStatic(); renderPreview();
+      paintStatic(); renderPreview(body);
     });
     H.$('#lo-scale', body).addEventListener('input', function () {
       st.scale = Number(this.value);
       this.parentNode.querySelector('.vl').textContent = st.scale + '%';
-      paintStatic(); renderPreview();
+      paintStatic(); renderPreview(body);
     });
     H.$('#lo-ox', body).addEventListener('input', function () {
       st.ox = Number(this.value);
       this.parentNode.querySelector('.vl').textContent = st.ox;
-      paintStatic(); renderPreview();
+      paintStatic(); renderPreview(body);
     });
     H.$('#lo-oy', body).addEventListener('input', function () {
       st.oy = Number(this.value);
       this.parentNode.querySelector('.vl').textContent = st.oy;
-      paintStatic(); renderPreview();
+      paintStatic(); renderPreview(body);
     });
     H.$('#lo-play', body).addEventListener('click', play);
     H.$('#lo-video', body).addEventListener('click', record);
