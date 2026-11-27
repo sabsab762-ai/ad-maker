@@ -589,12 +589,20 @@
     { w: '전액 환급', fix: '환불 조건 확인' }, { w: '무이자', fix: '조건부 무이자' }, { w: '원금보장', fix: '원금 보전 가능성' },
     { w: '수익 보장', fix: '수익 가능성' }, { w: '부업 보장', fix: '부수입 가능성' }, { w: '사은품 증정', fix: '사은품 제공(조건 확인)' }
   ];
+  var BANNED_SKIP = {
+    '최고': /최고급형|최고급/g,
+    '보장': /보장금|보장제도|보장형/g,
+    '확실': /확실성|확실히/g,
+    '평생': /평생보증|평생교육/g
+  };
   function bannedCheck(text) {
     var s = String(text || ''), out = [];
-    var SKIP = { '최고': /최고급/, '1위': /1위\s*(고객|브랜드)?\s*선정/, '보장': /보장(금|제도)/, '확실': /확실(성|히)/ };
     BANNED.forEach(function (b) {
-      if (s.indexOf(b.w) === -1) return;
-      if (SKIP[b.w] && SKIP[b.w].test(s) && s.replace(SKIP[b.w], '').indexOf(b.w) === -1) return;
+      var all = s.match(new RegExp(b.w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || [];
+      if (!all.length) return;
+      var skip = BANNED_SKIP[b.w];
+      var safe = skip ? (s.match(skip) || []).length : 0;
+      if (safe >= all.length) return;
       out.push(b);
     });
     return out;
@@ -721,6 +729,14 @@
   /* ===================================================================
      7. 카피 엔진 — 카페 원고 6개
      =================================================================== */
+  function whoPhrase(p) {
+    var s = (p.forWhom || [])[0] || '';
+    s = trimPunct(s).replace(/^신청\s*대상은\s*/, '').replace(/[.。]$/, '');
+    s = s.split(',')[0];
+    s = s.replace(/(이며|이고|이며|으로서|이고요)$/, '');
+    return cut(s, 28);
+  }
+
   function cafeDrafts(p, opts) {
     opts = opts || {};
     var purpose = opts.purpose || 'intro'; /* intro | ask */
@@ -766,7 +782,7 @@
         priceTxt ? '· 가격은 ' + priceTxt + ' 정도로 보면 됩니다' : '',
         '',
         cond.length ? condLine().trim() : '',
-        '저처럼 처음 알아보는 분들은 ' + (p.forWhom[0] ? cut(trimPunct(p.forWhom[0]).replace(/[.。]$/, ''), 38) : '조건부터 확인') + ' — 이 부분을 먼저 보시면 될 것 같아요.',
+        p.forWhom[0] ? '저처럼 처음 알아보는 분들은 “' + whoPhrase(p) + '” 조건부터 확인하시면 됩니다.' : '저처럼 처음 알아보는 분들은 조건부터 확인하시면 됩니다.',
         tail()
       ].filter(Boolean).join('\n')
     });
@@ -1053,7 +1069,7 @@
     /* 보관함 */
     products: Products,
     /* 카피 */
-    carrotTitles: carrotTitles, carouselPlan: carouselPlan, cafeDrafts: cafeDrafts,
+    carrotTitles: carrotTitles, carouselPlan: carouselPlan, cafeDrafts: cafeDrafts, whoPhrase: whoPhrase,
     cheatSheet: cheatSheet, bannedCheck: bannedCheck, shortOf: shortOf,
     benefitShort: benefitShort, priceShort: priceShort, shortTitle: shortTitle,
     /* 그리기 */

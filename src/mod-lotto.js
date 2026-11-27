@@ -500,9 +500,7 @@
         '<div class="stack">' +
           '<section class="panel"><h3>📱 화면 미리보기</h3>' +
             '<p class="psub">미리보기에서 끌어 옮기기 없이 슬라이더로 크기·위치를 맞춰요.</p>' +
-            '<div style="display:flex;justify-content:center;margin-top:12px">' +
-              '<img id="lo-preview" alt="로또 결과 화면 미리보기" style="width:100%;max-width:330px;border-radius:14px;border:1px solid var(--line);background:#fff">' +
-            '</div>' +
+            '<div id="lo-preview" style="display:flex;justify-content:center;margin-top:12px"></div>' +
             '<div class="meter" style="margin-top:10px"><i id="lo-bar" style="width:100%"></i></div>' +
             '<div class="setrow"><span class="lbl">크기</span><input type="range" id="lo-scale" min="80" max="120" step="2" value="' + st.scale + '"><span class="vl">' + st.scale + '%</span></div>' +
             '<div class="setrow"><span class="lbl">좌우</span><input type="range" id="lo-ox" min="-100" max="100" step="5" value="' + st.ox + '"><span class="vl">' + st.ox + '</span></div>' +
@@ -524,11 +522,14 @@
 
   var studioRoot = null;
   function renderPreview(root) {
-    var host = root || studioRoot || document;
-    var img = H.$('#lo-preview', host);
-    if (!img) return;
-    var cv = st.canvases.main || paintStatic();
-    img.src = cv.toDataURL('image/png');
+    var host = H.$('#lo-preview', root || studioRoot || document);
+    if (!host) return;
+    var cv = st.canvases.main || makeCanvas();
+    cv.style.cssText = 'width:100%;max-width:330px;height:auto;border-radius:14px;border:1px solid var(--line);background:#fff;display:block';
+    if (host.firstChild !== cv) {
+      host.innerHTML = '';
+      host.appendChild(cv);
+    }
   }
 
   function renderRows(body) {
