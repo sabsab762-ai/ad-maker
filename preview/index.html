@@ -5420,13 +5420,29 @@ var LOTTO_DATA = [{"no":1251,"date":"2026-11-21","n":[14,18,19,29,40,45],"b":1,"
       ctx.fillStyle = (st.styleKey === 'yellow' || st.styleKey === 'clean') ? '#17171B' : '#FFF';
       ctx.fillText(handle, padX + 32, Hh - 170);
     } else {
-      var r3 = drawHead(slide.head, textTop, 82, 44, titleCol, 4);
+      var hSize = Math.round(84 * scale), hLines;
+      do {
+        ctx.font = '800 ' + hSize + 'px ' + fam;
+        hLines = C.wrap(ctx, slide.head, W - padX * 2);
+        if (hLines.length <= 3) break;
+        hSize -= 4;
+      } while (hSize > 46);
+      var bSize = Math.round(42 * scale);
+      ctx.font = '500 ' + bSize + 'px ' + fam;
+      var preB = slide.text ? C.wrap(ctx, slide.text, W - padX * 2).slice(0, 6) : [];
+      var bodyH = Math.min(hLines.length, 3) * Math.round(hSize * 1.22) + (preB.length ? 24 + preB.length * Math.round(bSize * 1.4) : 0);
+      var bTop = usePhoto ? textTop : Math.min(Math.round(Hh * 0.34), Math.max(Math.round(Hh * 0.18), Math.round((Hh - bodyH) / 2 - 40)));
+      var r3 = drawHead(slide.head, bTop, 84, 46, titleCol, 3);
       afterHead = r3.y + 24;
       if (slide.text) {
-        ctx.font = '500 ' + Math.round(36 * scale) + 'px ' + fam;
+        ctx.font = '500 ' + bSize + 'px ' + fam;
         ctx.fillStyle = bodyCol === sy.fg ? sy.sub : bodyCol;
         var bl = C.wrap(ctx, slide.text, W - padX * 2);
-        afterHead = C.drawLines(ctx, bl, padX, afterHead, Math.round(54 * scale), 6);
+        afterHead = C.drawLines(ctx, bl, padX, afterHead, Math.round(bSize * 1.4), 6);
+      }
+      if (sy.deco === 'line' || sy.deco === 'marker') {
+        ctx.fillStyle = accent;
+        ctx.fillRect(padX, bTop - 34, 76, 6);
       }
       /* 본문 카드 배경(카드뉴스) */
       if (sy.deco === 'card' && !usePhoto) {
@@ -7693,9 +7709,9 @@ var LOTTO_DATA = [{"no":1251,"date":"2026-11-21","n":[14,18,19,29,40,45],"b":1,"
     st.headline = cs.headline[0] || '';
     H.$('#ch-custom', body).value = manual ? '' : st.headline;
     renderHeads(body);
-    renderCard(body);
-    renderCopySets(body);
-    App.toast('컨닝페이퍼를 만들었어요. 헤드라인을 골라 보세요.');
+    renderRight(body);
+    if (manual) App.toast('카드를 만들었어요. 헤드라인을 직접 입력해 다듬어 보세요.');
+    else App.toast('컨닝페이퍼를 만들었어요. 헤드라인을 골라 보세요.');
   }
 
   function renderHeads(body) {

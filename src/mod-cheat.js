@@ -336,9 +336,9 @@
     st.headline = cs.headline[0] || '';
     H.$('#ch-custom', body).value = manual ? '' : st.headline;
     renderHeads(body);
-    renderCard(body);
-    renderCopySets(body);
-    App.toast('컨닝페이퍼를 만들었어요. 헤드라인을 골라 보세요.');
+    renderRight(body);
+    if (manual) App.toast('카드를 만들었어요. 헤드라인을 직접 입력해 다듬어 보세요.');
+    else App.toast('컨닝페이퍼를 만들었어요. 헤드라인을 골라 보세요.');
   }
 
   function renderHeads(body) {
