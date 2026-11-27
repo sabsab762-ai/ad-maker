@@ -190,6 +190,9 @@
         var og = ctx.createLinearGradient(0, ph.h * 0.35, 0, ph.h);
         og.addColorStop(0, 'rgba(0,0,0,0)'); og.addColorStop(1, 'rgba(0,0,0,.45)');
         ctx.fillStyle = og; ctx.fillRect(0, ph.h * 0.35, W, ph.h * 0.65);
+        var tg = ctx.createLinearGradient(0, 0, 0, ph.h * 0.28);
+        tg.addColorStop(0, 'rgba(0,0,0,.38)'); tg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = tg; ctx.fillRect(0, 0, W, ph.h * 0.28);
       } else {
         C.roundRect(ctx, ph.x, ph.y, ph.w, ph.h, 30);
         ctx.clip();
@@ -282,7 +285,7 @@
       afterHead = r1.y + 26;
       if (slide.sub) {
         ctx.font = '600 ' + Math.round(38 * scale) + 'px ' + fam;
-        ctx.fillStyle = usePhoto ? 'rgba(255,255,255,.85)' : sy.sub;
+        ctx.fillStyle = onPhoto ? 'rgba(255,255,255,.85)' : sy.sub;
         var sl = C.wrap(ctx, slide.sub, W - padX * 2);
         afterHead = C.drawLines(ctx, sl, padX, afterHead, Math.round(52 * scale), 3);
       }
