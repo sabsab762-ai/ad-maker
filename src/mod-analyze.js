@@ -227,18 +227,22 @@
         var p = A.analyze({ text: res.text, url: url, via: res.via, rawTitle: res.title });
         p.shots = state.shots.slice(0, 4);
         p.rawTitle = res.title || '';
-        ui.set(2, 'on', '필드 6개 · 출처 문장 ' + p.fields.filter(function (f) { return f.source; }).length + '개');
+        ui.set(2, 'on', p.chars + '자 정리');
         ui.set(3, 'run');
         setTimeout(function () {
-          ui.set(3, 'on', '고객 3 · 소구점 ' + p.points.length);
+          ui.set(3, 'on', '필드 6 · 출처 문장 ' + p.fields.filter(function (f) { return f.source; }).length + '개');
           ui.set(4, 'run');
           setTimeout(function () {
-            ui.set(4, 'on', '저장 완료');
-            ui.done('분석 완료 · ' + res.via + '로 읽었어요');
-            state.busy = false;
-            finish(p);
-          }, 240);
-        }, 240);
+            ui.set(4, 'on', '고객 3 · 소구점 ' + p.points.length);
+            ui.set(5, 'run');
+            setTimeout(function () {
+              ui.set(5, 'on', '저장 완료');
+              ui.done('분석 완료 · ' + res.via + '로 읽었어요');
+              state.busy = false;
+              finish(p);
+            }, 220);
+          }, 220);
+        }, 200);
       }).catch(function (err) {
         state.busy = false;
         ui.set(1, 'bad', '모든 경로 실패');
