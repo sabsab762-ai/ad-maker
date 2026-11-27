@@ -209,6 +209,8 @@
       '<p>' + esc(mod.desc) + '</p></div>';
 
     var body = document.createElement('div');
+    /* 다른 자판기에서 넘긴 상품이 있으면 화면을 새로 그립니다 */
+    if (Store.get('pick', null) && App.cache[mod.id]) delete App.cache[mod.id];
     if (!App.cache[mod.id]) {
       try { mod.render(body); } catch (err) {
         body.innerHTML = '<div class="panel"><h3>화면을 여는 중 문제가 생겼어요</h3><p class="psub mono">' + esc(err && err.message) + '</p></div>';

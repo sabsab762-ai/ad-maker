@@ -1,427 +1,714 @@
 /* =====================================================================
-   Module 1 · 🥕 당근 광고 자판기
+   Module 1 · 🥕 당근 광고 자판기 (상세페이지 → 제목 + 소재 이미지)
    ===================================================================== */
 (function () {
   'use strict';
-  var H = App.helpers, S = App.store, esc = App.esc;
+  var H = App.helpers, S = App.store, esc = App.esc, A = App.ads;
 
-  var CATS = ['인터넷·통신', '렌탈·타이어', '이사·청소', '지원금·생활'];
-  var EMOJI = { '인터넷·통신': '📶', '렌탈·타이어': '🛞', '이사·청소': '📦', '지원금·생활': '💰' };
+  var DONG_DEFAULT = '공덕동';
+  var BUTTONS = ['바로가기', '문의하기', '구매하기', '신청하기'];
+  var BUDGETS = [5000, 10000, 20000];
   var DISCLOSURE = '#광고 이 글은 제휴(어필리에이트) 활동의 일환으로, 링크를 통해 가입·구매하시면 작성자에게 소정의 수수료가 지급될 수 있습니다.';
-  var SAMPLES = [
-    { id: 's1', emoji: '📶', category: '인터넷·통신', title: '인터넷 · TV 결합 가입 최대 혜택', benefit: '최대 47만원 혜택', note: '설치비 0원 · 3년 약정 기준 사은품 즉시 지급', url: '', sample: true },
-    { id: 's2', emoji: '🛞', category: '렌탈·타이어', title: '타이어 렌탈 (4짝 기준)', benefit: '월 2만원대', note: '교체·보관·AS까지 한 번에, 목돈 없이 월 렌탈', url: '', sample: true },
-    { id: 's3', emoji: '📦', category: '이사·청소', title: '포장이사 견적 비교', benefit: '최대 30% 절감', note: '3개 업체 견적을 한 번에 비교하고 이사일 확정', url: '', sample: true },
-    { id: 's4', emoji: '💰', category: '지원금·생활', title: '소상공인 정책자금 진단', benefit: '최대 7,000만원', note: '업종·매출만 입력하면 받을 수 있는 지원금 3분 진단', url: '', sample: true }
-  ];
 
-  function load() {
-    var v = S.get('danggeun.items', null);
-    if (!Array.isArray(v) || !v.length) return SAMPLES.map(function (x) { return Object.assign({}, x); });
-    return v;
+  var st = {
+    product: null,
+    titles: [],
+    picked: '',
+    custom: '',
+    creatives: [],
+    photos: [],
+    adType: 'display',
+    landing: 'profile',
+    button: '바로가기',
+    dong: DONG_DEFAULT,
+    budget: 10000,
+    days: 7,
+    busy: false,
+    phase: 'input' /* input | work | result */
+  };
+
+  function reset() {
+    st.product = null; st.titles = []; st.picked = ''; st.custom = '';
+    st.creatives = []; st.photos = []; st.busy = false; st.phase = 'input';
   }
 
-  function matchCat(raw) {
-    var v = String(raw || '').replace(/\s/g, '');
-    if (!v) return null;
-    for (var i = 0; i < CATS.length; i++) {
-      var flat = CATS[i].replace(/·/g, '');
-      if (v === CATS[i] || v === flat || v.indexOf(flat) !== -1 || flat.indexOf(v) !== -1) return CATS[i];
+  /* ---------------- 소재 이미지 그리기 ---------------- */
+  function fitFont(ctx, text, maxW, start, min, weight) {
+    var size = start;
+    do {
+      ctx.font = (weight || 800) + ' ' + size + 'px Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
+      if (ctx.measureText(text).width <= maxW) break;
+      size -= 6;
+    } while (size > min);
+    return size;
+  }
+
+  function paint(p, opt) {
+    opt = opt || {};
+    var W = opt.w || 1080, Hh = opt.h || 1080;
+    var cv = document.createElement('canvas');
+    cv.width = W; cv.height = Hh;
+    var ctx = cv.getContext('2d');
+    var C = A.canvas;
+    var variant = opt.variant || 'carrot';
+    var title = opt.title || p.title;
+    var price = p.price || '';
+    var ben = (p.benefits || []).filter(function (b) { return !/찾지 못했/.test(b); })[0] || '';
+    ben = A.trimPunct(ben).replace(/^[·・\-]\s*/, '');
+    var photo = opt.photo || null;
+    var dong = (st.dong || '').trim();
+
+    if (variant === 'photo' && photo) {
+      C.cover(ctx, photo, 0, 0, W, Hh);
+      var gr = ctx.createLinearGradient(0, Hh * 0.35, 0, Hh);
+      gr.addColorStop(0, 'rgba(0,0,0,0)');
+      gr.addColorStop(0.55, 'rgba(0,0,0,.55)');
+      gr.addColorStop(1, 'rgba(0,0,0,.86)');
+      ctx.fillStyle = gr; ctx.fillRect(0, Hh * 0.35, W, Hh * 0.65);
+    } else if (variant === 'dark') {
+      ctx.fillStyle = '#141418'; ctx.fillRect(0, 0, W, Hh);
+      var rg = ctx.createRadialGradient(W * 0.85, Hh * 0.1, 30, W * 0.85, Hh * 0.1, W * 0.9);
+      rg.addColorStop(0, 'rgba(99,56,245,.5)');
+      rg.addColorStop(1, 'rgba(99,56,245,0)');
+      ctx.fillStyle = rg; ctx.fillRect(0, 0, W, Hh);
+    } else if (variant === 'clean') {
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, W, Hh);
+      ctx.fillStyle = '#6338F5'; ctx.fillRect(0, 0, W, 16);
+      ctx.fillStyle = '#F4F1FF'; ctx.fillRect(0, Hh - 150, W, 150);
+    } else {
+      var g = ctx.createLinearGradient(0, 0, W, Hh);
+      g.addColorStop(0, '#FF7A22'); g.addColorStop(1, '#F2540B');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, Hh);
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath(); ctx.arc(W * 0.86, Hh * 0.14, W * 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
     }
-    var map = [
-      [['인터넷', '통신', '폰', '요금제', '알뜰', 'iptv', 'tv', '결합'], '인터넷·통신'],
-      [['렌탈', '렌트', '타이어', '정수기', '비데', '구독'], '렌탈·타이어'],
-      [['이사', '청소', '입주', '포장', '원룸', '짐'], '이사·청소'],
-      [['지원금', '정책', '정부', '카드', '보험', '적금', '대출', '소상공', '창업', '환급'], '지원금·생활']
-    ];
-    var low = v.toLowerCase(), i2, k;
-    for (i2 = 0; i2 < map.length; i2++) for (k = 0; k < map[i2][0].length; k++) if (low.indexOf(map[i2][0][k]) !== -1) return map[i2][1];
-    return null;
+
+    var dark = (variant === 'dark' || variant === 'photo');
+    var fg = dark ? '#FFFFFF' : (variant === 'clean' ? '#17171B' : '#FFFFFF');
+    var sub = dark ? 'rgba(255,255,255,.72)' : (variant === 'clean' ? '#6D6D7A' : 'rgba(255,255,255,.88)');
+    ctx.textBaseline = 'top';
+
+    /* 상단 배지 */
+    var badge = dong ? dong + ' 이웃' : '동네 이웃';
+    ctx.font = '800 34px Pretendard, "Apple SD Gothic Neo", sans-serif';
+    var bw = ctx.measureText(badge).width + 44;
+    ctx.fillStyle = dark ? 'rgba(255,255,255,.16)' : (variant === 'clean' ? '#F1ECFF' : 'rgba(255,255,255,.22)');
+    C.roundRect(ctx, 72, 72, bw, 62, 31); ctx.fill();
+    ctx.fillStyle = variant === 'clean' ? '#4C24D6' : '#FFFFFF';
+    ctx.fillText(badge, 94, 87);
+
+    /* 상단 브랜드(검색광고형) */
+    if (p.domain) {
+      ctx.font = '700 30px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      ctx.fillStyle = sub; ctx.textAlign = 'right';
+      ctx.fillText(A.cut(p.domain, 26), W - 72, 92);
+      ctx.textAlign = 'left';
+    }
+
+    var y;
+    if (variant === 'dark') {
+      /* 큰 가격 */
+      if (price) {
+        ctx.font = '800 46px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        ctx.fillStyle = sub; ctx.fillText('지금 조건', 72, 300);
+        var ps = fitFont(ctx, price, W - 144, 168, 56, 800);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(price, 72, 360);
+        y = 360 + ps + 70;
+      } else {
+        y = 330;
+      }
+      ctx.font = '800 74px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      var tl = C.wrap(ctx, title, W - 144);
+      y = C.drawLines(ctx, tl, 72, y, 92, 4);
+      y += 46;
+      ctx.font = '600 38px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      ctx.fillStyle = sub;
+      var bl = C.wrap(ctx, ben || '자세한 조건은 프로필에서 확인하세요', W - 144);
+      C.drawLines(ctx, bl, 72, y, 56, 3);
+      ctx.fillStyle = '#6338F5'; ctx.fillRect(0, Hh - 132, W, 132);
+      ctx.fillStyle = '#FFFFFF'; ctx.font = '800 40px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      ctx.fillText(st.button + '  →', 72, Hh - 92);
+    } else if (variant === 'clean') {
+      y = 210;
+      ctx.fillStyle = '#FF6F0F';
+      ctx.font = '800 40px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      ctx.fillText(A.cut(p.category || '동네 광고', 20), 72, y - 60);
+      ctx.fillStyle = fg;
+      ctx.font = '800 84px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      var tl2 = C.wrap(ctx, title, W - 144);
+      y = C.drawLines(ctx, tl2, 72, y, 104, 4);
+      if (price) {
+        y += 40;
+        ctx.fillStyle = '#17171B';
+        var ps2 = fitFont(ctx, price, W - 144, 104, 48, 800);
+        ctx.fillStyle = '#FF6F0F';
+        ctx.fillText(price, 72, y);
+        y += ps2 + 30;
+      }
+      if (ben) {
+        ctx.fillStyle = '#45454F';
+        ctx.font = '600 38px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        C.drawLines(ctx, C.wrap(ctx, ben, W - 144), 72, y, 56, 3);
+      }
+      ctx.fillStyle = '#17171B'; ctx.font = '800 36px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      ctx.fillText(st.button + ' →', 72, Hh - 88);
+    } else if (variant === 'photo' && photo) {
+      var ty = Hh - 430;
+      if (price) {
+        ctx.font = '800 40px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        var pw = ctx.measureText(price).width + 56;
+        ctx.fillStyle = 'rgba(255,255,255,.92)';
+        C.roundRect(ctx, 72, ty - 96, pw, 72, 20); ctx.fill();
+        ctx.fillStyle = '#FF6F0F'; ctx.fillText(price, 100, ty - 76);
+      }
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '800 78px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      var tl3 = C.wrap(ctx, title, W - 144);
+      y = C.drawLines(ctx, tl3, 72, ty, 94, 4);
+      if (ben) {
+        ctx.fillStyle = 'rgba(255,255,255,.82)';
+        ctx.font = '600 36px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        C.drawLines(ctx, C.wrap(ctx, ben, W - 144), 72, y + 18, 52, 2);
+      }
+    } else {
+      /* carrot */
+      var by = 330;
+      ctx.fillStyle = 'rgba(255,255,255,.9)';
+      ctx.font = '700 36px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      ctx.fillText(A.cut(p.category || '동네 혜택', 24), 72, by - 60);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '800 88px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      var tl4 = C.wrap(ctx, title, W - 144);
+      y = C.drawLines(ctx, tl4, 72, by, 110, 4);
+      y += 34;
+      if (price) {
+        var ps3 = fitFont(ctx, price, W - 144, 120, 56, 800);
+        ctx.fillStyle = '#FFF3B0';
+        ctx.font = '800 ' + ps3 + 'px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        ctx.fillText(price, 72, y);
+        y += ps3 + 22;
+      }
+      if (ben) {
+        ctx.fillStyle = 'rgba(255,255,255,.92)';
+        ctx.font = '600 38px Pretendard, "Apple SD Gothic Neo", sans-serif';
+        var bl2 = C.wrap(ctx, ben, W - 144);
+        y = C.drawLines(ctx, bl2, 72, y, 54, 3);
+      }
+      ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(0, Hh - 122, W, 122);
+      ctx.fillStyle = '#FFFFFF'; ctx.font = '800 38px Pretendard, "Apple SD Gothic Neo", sans-serif';
+      ctx.fillText(st.button + '  →', 72, Hh - 86);
+    }
+
+    /* 하단 안내 */
+    ctx.font = '600 26px Pretendard, "Apple SD Gothic Neo", sans-serif';
+    ctx.fillStyle = dark ? 'rgba(255,255,255,.5)' : (variant === 'clean' ? '#9C9CA8' : 'rgba(255,255,255,.72)');
+    ctx.textAlign = 'right';
+    ctx.fillText('광고 · 조건은 신청 페이지에서 확인', W - 72, Hh - (variant === 'clean' ? 46 : 46));
+    ctx.textAlign = 'left';
+    return cv;
   }
 
-  function normalizeUrl(raw) {
-    var v = String(raw || '').trim();
-    if (!v) return '';
-    if (/^https?:\/\//i.test(v)) return v;
-    if (/^[\w-]+(\.[\w-]+)+(\/.*)?$/i.test(v)) return 'https://' + v;
-    return '';
-  }
-  function isLive(u) { return /^https?:\/\//i.test(String(u || '').trim()); }
-
-  /* ---------- 홍보글 3종 ---------- */
-  function castTexts(item) {
-    var tags = { '인터넷·통신': '#인터넷가입', '렌탈·타이어': '#렌탈 #타이어', '이사·청소': '#이사 #입주청소', '지원금·생활': '#지원금 #생활정보' };
-    var url = String(item.url || '').trim();
-    var link = isLive(url) ? url : '(제휴 링크 미등록 — 카드 등록에서 링크를 넣어주세요)';
-    var benefit = item.benefit || '';
-    var note = item.note || '';
-    var tag = tags[item.category] || '#' + String(item.category || '생활').replace(/[·\s]/g, '');
-
-    var carrot = [
-      (item.emoji || '🥕') + ' ' + item.title,
-      '',
-      benefit + (note ? ' · ' + note : ''),
-      '',
-      '동네 이웃님들께 먼저 알려드려요. 궁금한 건 편하게 댓글이나 채팅 주세요!',
-      '👉 ' + link,
-      '',
-      '#광고 #동네정보 ' + tag,
-      DISCLOSURE
-    ].join('\n');
-
-    var thread = [
-      (item.emoji || '🥕') + ' ' + item.title,
-      benefit + (note ? ' | ' + note : ''),
-      '',
-      '요즘 제일 많이 물어보는 그거, 링크 정리해뒀어요 👇',
-      link,
-      '',
-      '저장해두고 필요할 때 보세요 🌱',
-      '#생활혜택 #동네꿀팁 #제휴링크',
-      DISCLOSURE
-    ].join('\n');
-
-    var cafe = [
-      '[정보] ' + item.title + (benefit ? ' — ' + benefit : ''),
-      '',
-      '안녕하세요, 동네 소식 공유드립니다.',
-      '· 혜택: ' + (benefit || '-'),
-      '· 특징: ' + (note || '-'),
-      '· 자세히 보기: ' + link,
-      '',
-      '관심 있으신 분들은 링크 확인해보시고, 궁금한 점은 댓글로 남겨주세요.',
-      '',
-      '※ ' + DISCLOSURE
-    ].join('\n');
-
-    return [
-      { key: 'carrot', label: '① 당근 비즈프로필 / 동네홍보', hint: '짧고 다정하게, 이웃에게 말 걸듯이', text: carrot },
-      { key: 'thread', label: '② 스레드 / 인스타그램', hint: '줄바꿈 위주로 눈에 띄게', text: thread },
-      { key: 'cafe', label: '③ 지역 카페', hint: '정보글 톤으로 자세하게', text: cafe }
-    ];
+  /* ---------------- 화면 ---------------- */
+  function shell(root) {
+    root.innerHTML =
+      '<div class="cols">' +
+        '<div class="stack" id="dg-left"></div>' +
+        '<div class="stack" id="dg-right"></div>' +
+      '</div>';
+    return { left: H.$('#dg-left', root), right: H.$('#dg-right', root) };
   }
 
-  /* ---------- 배포용 순수 HTML ---------- */
-  function buildPublicHtml(items) {
-    var data = [];
-    for (var i = 0; i < items.length; i++) {
-      data.push({
-        e: items[i].emoji || '🥕', c: items[i].category || '지원금·생활',
-        t: items[i].title || '', b: items[i].benefit || '', n: items[i].note || '', u: items[i].url || ''
+  function renderInput(box) {
+    var saved = A.products.list();
+    box.innerHTML =
+      '<section class="stepcard"><div class="sh"><span class="sno">1</span>' +
+        '<div><b>상세페이지에서 광고 만들기</b><span class="ss">상세페이지 주소를 넣으면 제목 후보와 소재 이미지를 자동으로 만들어요.</span></div></div>' +
+        '<div class="field"><label for="dg-url">상세페이지 주소</label>' +
+        '<input id="dg-url" type="text" inputmode="url" placeholder="https://... 광고할 상품 상세페이지"></div>' +
+        '<div class="field"><label for="dg-load">또는 전에 등록한 상품 불러오기</label>' +
+        '<select id="dg-load">' + A.products.options('', '전에 등록한 상품 불러오기') + '</select>' +
+        (saved.length ? '<p class="tip">보관함에 ' + saved.length + '개 상품이 있어요. 고르면 바로 2단계로 넘어갑니다.</p>' : '<p class="tip">보관함이 비어 있다면 <b>사이트 분석하기</b>에서 먼저 상품을 담아 두세요.</p>') +
+        '</div>' +
+        '<details style="margin-top:12px"><summary style="cursor:pointer;font-size:12.5px;font-weight:800;color:var(--violet-d)">직접 입력으로 시작하기</summary>' +
+          '<div class="field"><label for="dg-m-title">상품 이름</label><input id="dg-m-title" type="text" placeholder="예: 타이어 4본 렌탈"></div>' +
+          '<div class="row2"><div class="field"><label for="dg-m-price">가격</label><input id="dg-m-price" type="text" placeholder="예: 월 3,000원부터"></div>' +
+          '<div class="field"><label for="dg-m-benefit">대표 혜택</label><input id="dg-m-benefit" type="text" placeholder="예: 장착 후 상품권 3만원"></div></div>' +
+          '<div class="actions"><button class="btn btn-soft btn-block" type="button" id="dg-manual">직접 입력으로 만들기</button></div>' +
+        '</details>' +
+        '<div class="actions"><button class="btn btn-primary btn-block" type="button" id="dg-go">당근 광고 만들기</button></div>' +
+        '<p class="hint">읽기가 막히는 사이트는 사이트 분석하기의 <b>본문 붙여넣기</b>로 상품을 먼저 담아 주세요.</p>' +
+      '</section>' +
+      '<section class="stepcard off"><div class="sh"><span class="sno">2</span>' +
+        '<div><b>광고 설정</b><span class="ss">광고 종류·랜딩·지역·예산·기간을 정합니다. (1단계 뒤에 열려요)</span></div></div></section>';
+
+    H.$('#dg-go', box).addEventListener('click', function () {
+      var url = A.normalizeUrl(H.$('#dg-url', box).value);
+      if (!url) { App.toast('상세페이지 주소를 넣거나, 전에 등록한 상품을 골라 주세요.'); H.$('#dg-url', box).focus(); return; }
+      readAndBuild(box, url);
+    });
+    H.$('#dg-load', box).addEventListener('change', function () {
+      var id = this.value;
+      if (!id) return;
+      var p = A.products.get(id);
+      if (!p) return;
+      st.product = p;
+      buildAll(box, '보관함에서 불러옴 · ' + (p.via || '저장된 분석'));
+    });
+    H.$('#dg-manual', box).addEventListener('click', function () {
+      var t = H.$('#dg-m-title', box).value.trim();
+      if (!t) { App.toast('상품 이름을 넣어 주세요.'); return; }
+      var p = A.analyze({
+        text: [t, H.$('#dg-m-price', box).value, H.$('#dg-m-benefit', box).value].filter(Boolean).join('\n'),
+        rawTitle: t, via: '직접 입력'
       });
-    }
-    var payload = JSON.stringify(data).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
-    var cats = JSON.stringify(CATS);
-
-    var css = [
-      '*{box-sizing:border-box}',
-      'body{margin:0;background:#fff;color:#1A1A1A;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;line-height:1.5}',
-      '.app{max-width:720px;margin:0 auto;padding:0 0 60px}',
-      '.top{display:flex;align-items:center;gap:9px;padding:12px 18px;border-bottom:1px solid #ECECEC;position:sticky;top:0;background:rgba(255,255,255,.94);backdrop-filter:blur(10px)}',
-      '.top .m{width:34px;height:34px;display:grid;place-items:center;background:#FFF1E6;border-radius:11px;font-size:18px}',
-      '.top b{font-size:15px;font-weight:800}',
-      '.top small{display:block;font-size:10.5px;color:#9A9A9A;font-weight:700}',
-      '.hero{padding:22px 18px 4px}',
-      '.hero i{display:inline-block;padding:5px 10px;border-radius:999px;background:#FFF1E6;color:#E15B00;font-size:11px;font-weight:800;font-style:normal}',
-      '.hero h1{margin:11px 0 5px;font-size:26px;font-weight:800;letter-spacing:-.035em}',
-      '.hero p{color:#6B6B6B;font-size:13.5px}',
-      '.chips{display:flex;gap:7px;overflow:auto;padding:14px 18px 4px;scrollbar-width:none}',
-      '.chips::-webkit-scrollbar{display:none}',
-      '.chip{flex:none;padding:8px 13px;border:1px solid #ECECEC;border-radius:999px;background:#fff;font-size:13px;font-weight:700;color:#4B4B4B}',
-      '.chip.on{background:#FF6F0F;border-color:#FF6F0F;color:#fff}',
-      '.chip span{margin-left:5px;font-size:10.5px;opacity:.7}',
-      '.meta{padding:8px 20px 2px;font-size:12px;color:#9A9A9A;font-weight:700}',
-      '.list{display:grid;gap:11px;padding:8px 18px}',
-      '.c{border:1px solid #ECECEC;border-radius:16px;padding:15px}',
-      '.c .h{display:flex;gap:10px;align-items:flex-start}',
-      '.c .ic{width:42px;height:42px;flex:none;display:grid;place-items:center;background:#FFF7F0;border-radius:13px;font-size:20px}',
-      '.c .bd{min-width:0}',
-      '.c .bg{display:inline-block;padding:2px 8px;border-radius:999px;background:#F4F5F7;color:#6E6E73;font-size:10.5px;font-weight:800;margin-bottom:4px}',
-      '.c h3{margin:0;font-size:15px;font-weight:800;letter-spacing:-.02em;word-break:keep-all}',
-      '.c .bf{margin-top:11px;font-size:20px;font-weight:800;letter-spacing:-.03em;color:#FF6F0F}',
-      '.c p{margin:4px 0 0;font-size:12.5px;color:#6B6B6B;line-height:1.6;word-break:keep-all}',
-      '.c a,.c button{display:flex;align-items:center;justify-content:center;margin-top:12px;height:42px;border-radius:11px;background:#FFF1E6;color:#E15B00;font-size:13.5px;font-weight:800;text-decoration:none;border:0;width:100%}',
-      '.empty{padding:40px 18px;text-align:center;border:1px dashed #E4E4E4;border-radius:16px;color:#9A9A9A;font-size:12.5px}',
-      '.foot{margin:16px 18px 0;padding-top:14px;border-top:1px solid #ECECEC;font-size:11px;line-height:1.65;color:#9A9A9A}',
-      '@media(min-width:640px){.list{grid-template-columns:1fr 1fr}}'
-    ].join('');
-
-    var script = [
-      '(function(){',
-      'var ITEMS=' + payload + ',CATS=' + cats + ',cur="전체";',
-      'var chips=document.getElementById("chips"),list=document.getElementById("list"),meta=document.getElementById("meta");',
-      'function esc(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}',
-      'function live(u){return /^https?:\\/\\//i.test(String(u||"").trim())}',
-      'function pick(c){return c==="전체"?ITEMS:ITEMS.filter(function(i){return i.c===c})}',
-      'function renderChips(){var all=["전체"].concat(CATS),h="";for(var i=0;i<all.length;i++){var n=all[i],c=pick(n).length;h+=\'<button class="chip\'+(n===cur?" on":"")+\'" data-cat="\'+esc(n)+\'">\'+esc(n)+\'<span>\'+c+\'</span></button>\'}chips.innerHTML=h}',
-      'function card(i){var badge=\'<span class="bg">\'+esc(i.c)+\'</span>\';var b=i.b?\'<div class="bf">\'+esc(i.b)+\'</div>\':"";var n=i.n?\'<p>\'+esc(i.n)+\'</p>\':"";var act=live(i.u)?\'<a href="\'+esc(i.u)+\'" target="_blank" rel="noopener noreferrer sponsored">바로가기 ›</a>\':\'<button data-missing="1">바로가기 ›</button>\';return \'<article class="c"><div class="h"><div class="ic">\'+esc(i.e)+\'</div><div class="bd">\'+badge+\'<h3>\'+esc(i.t)+\'</h3></div></div>\'+b+n+act+\'</article>\'}',
-      'function render(){var l=pick(cur);meta.innerHTML="<b>"+l.length+"</b>개 혜택";if(!l.length){list.innerHTML=\'<div class="empty">아직 등록된 혜택이 없어요.</div>\';list.style.gridTemplateColumns="1fr";return}list.style.gridTemplateColumns="";var h="";for(var i=0;i<l.length;i++)h+=card(l[i]);list.innerHTML=h}',
-      'chips.addEventListener("click",function(e){var b=e.target.closest(".chip");if(!b)return;cur=b.getAttribute("data-cat");renderChips();render()});',
-      'list.addEventListener("click",function(e){if(e.target.closest("[data-missing]"))alert("제휴 링크가 아직 등록되지 않은 카드예요.")});',
-      'renderChips();render();})();'
-    ].join('\n');
-
-    return '<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n' +
-      '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
-      '<meta name="theme-color" content="#FF6F0F">\n<title>생활 혜택 자판기</title>\n' +
-      '<style>' + css + '</style>\n</head>\n<body>\n<div class="app">\n' +
-      '<header class="top"><span class="m">🥕</span><div><b>생활 혜택 자판기</b><small>동네 혜택 모음</small></div></header>\n' +
-      '<div class="hero"><i>#광고 · 제휴 링크 안내</i><h1>생활 혜택 자판기</h1><p>동네에서 쓸 만한 혜택만 모았어요. 버튼 한 번이면 바로 확인!</p></div>\n' +
-      '<div class="chips" id="chips"></div>\n<div class="meta" id="meta"></div>\n<div class="list" id="list"></div>\n' +
-      '<div class="foot">이 페이지의 링크는 <b>제휴(어필리에이트) 링크</b>를 포함하고 있으며, 링크를 통한 가입·구매 시 운영자에게 소정의 수수료가 지급될 수 있습니다. 상품의 조건과 혜택은 판매처 사정에 따라 달라질 수 있으니 신청 전 꼭 확인해 주세요.</div>\n' +
-      '</div>\n<script>\n' + script + '\n<\/script>\n</body>\n</html>\n';
+      p.price = H.$('#dg-m-price', box).value.trim() || p.price;
+      var b = H.$('#dg-m-benefit', box).value.trim();
+      if (b) p.benefits = [b].concat(p.benefits);
+      st.product = p;
+      buildAll(box, '직접 입력');
+    });
   }
 
-  /* ---------- 화면 ---------- */
-  var state = { items: [], cat: '전체', editing: null };
+  function readAndBuild(box, url) {
+    if (st.busy) return;
+    st.busy = true;
+    box.innerHTML =
+      '<section class="stepcard"><div class="sh"><span class="sno">1</span><div><b>상세페이지 읽는 중</b><span class="ss">' + esc(url) + '</span></div></div>' +
+      '<div id="dg-prog" style="margin-top:12px">' + A.progressHtml('사이트 분석 중', [
+        { label: '주소 확인' }, { label: '페이지 읽기' }, { label: '상품 정보 정리' }, { label: '제목·이미지 준비' }
+      ]) + '</div></section>';
+    var box2 = H.$('.aiwork', box);
+    function setRow(i, cls, msg) {
+      var r = H.$('[data-prow="' + i + '"]', box2);
+      if (!r) return;
+      r.className = 'airow ' + cls;
+      if (msg) H.$('.pmsg', r).textContent = msg;
+    }
+    setRow(0, 'on', A.domainOf(url));
+    setRow(1, 'run', '여러 경로 시도');
+    A.readPage(url, function (s) {
+      if (s.phase === 'try') setRow(1, 'run', s.label + ' 시도');
+      if (s.phase === 'ok') setRow(1, 'on', s.label + ' · ' + s.chars + '자');
+      if (s.phase === 'fail') setRow(1, 'run', s.label + ' 실패 → 다음');
+    }).then(function (res) {
+      setRow(1, 'on', res.via + ' · ' + res.text.replace(/\s/g, '').length + '자');
+      setRow(2, 'run');
+      var p = A.analyze({ text: res.text, url: url, via: res.via, rawTitle: res.title });
+      setRow(2, 'on', '혜택 ' + p.benefits.length + ' · 고객 3 · 소구점 ' + p.points.length);
+      setRow(3, 'run');
+      st.product = p;
+      A.products.save(p);
+      setTimeout(function () {
+        setRow(3, 'on', '제목 10안 준비');
+        st.busy = false;
+        buildAll(box, res.via);
+      }, 320);
+    }).catch(function (err) {
+      st.busy = false;
+      box.innerHTML =
+        '<section class="stepcard"><div class="sh"><span class="sno">1</span><div><b>읽지 못했어요</b><span class="ss">' + esc(err.message) + '</span></div></div>' +
+        '<div class="notice" style="margin-top:12px;background:#FFF6F6;border-color:#FFD9D9;color:#8A2F2F"><div>' +
+        (err.tries ? err.tries.map(function (t) { return esc(t.label + ': ' + t.msg); }).join('<br>') + '<br><br>' : '') +
+        '① <b>사이트 분석하기</b>에서 본문을 붙여넣어 상품을 담은 뒤 여기서 불러오거나 ② 아래에 상품 이름·가격·혜택을 직접 넣어 주세요.' +
+        '</div></div>' +
+        '<div class="field"><label for="dg-m-title">상품 이름</label><input id="dg-m-title" type="text" placeholder="예: 타이어 4본 렌탈"></div>' +
+        '<div class="row2"><div class="field"><label for="dg-m-price">가격</label><input id="dg-m-price" type="text"></div>' +
+        '<div class="field"><label for="dg-m-benefit">대표 혜택</label><input id="dg-m-benefit" type="text"></div></div>' +
+        '<div class="actions"><button class="btn btn-primary" type="button" id="dg-manual2">직접 입력으로 만들기</button>' +
+        '<button class="btn btn-ghost" type="button" id="dg-retry">주소 다시 넣기</button></div></section>';
+      H.$('#dg-manual2', box).addEventListener('click', function () {
+        var t = H.$('#dg-m-title', box).value.trim();
+        if (!t) { App.toast('상품 이름을 넣어 주세요.'); return; }
+        var p = A.analyze({ text: [t, H.$('#dg-m-price', box).value, H.$('#dg-m-benefit', box).value].join('\n'), rawTitle: t, via: '직접 입력' });
+        p.price = H.$('#dg-m-price', box).value.trim() || p.price;
+        st.product = p;
+        buildAll(box, '직접 입력');
+      });
+      H.$('#dg-retry', box).addEventListener('click', function () { renderInput(box); });
+    });
+  }
 
-  App.register({
-    id: 'danggeun', emoji: '🥕', name: '당근 광고 자판기', free: false, tag: '제휴·홍보',
-    desc: '동네 혜택 카드 등록 → 홍보글 3종 자동 생성 → 배포용 HTML까지.',
-    help: '카드를 등록하고 일괄 붙여넣기로 한 번에 추가하면, 당근·스레드·카페 홍보글이 자동으로 만들어집니다. 배포용 HTML을 내려받아 Netlify·GitHub Pages에 올리면 그대로 사이트가 됩니다.',
-    render: function (root) {
-      var st = document.createElement('style');
-      st.textContent = '.dgfeed{display:grid;gap:8px;max-height:430px;overflow:auto;padding-right:2px}' +
-        '.dgfeed .c{border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:#fff;display:flex;gap:10px;align-items:flex-start}' +
-        '.dgfeed .ic{width:34px;height:34px;flex:none;display:grid;place-items:center;background:#FFF6EE;border-radius:10px;font-size:17px}' +
-        '.dgfeed .t{font-size:12.5px;font-weight:800;letter-spacing:-.02em;line-height:1.4;word-break:keep-all}' +
-        '.dgfeed .b{margin-top:3px;font-size:13px;font-weight:800;color:#E15B00;letter-spacing:-.02em}' +
-        '.dgfeed .n{margin-top:2px;font-size:11px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}' +
-        '.dgfeed .cat{display:inline-block;font-size:10px;font-weight:800;color:#8A8A8F;background:#F4F5F7;border-radius:999px;padding:1px 6px;margin-bottom:3px}';
-      document.head.appendChild(st);
+  /* ---------------- 2단계 설정 + 결과 ---------------- */
+  function buildAll(box, via) {
+    st.phase = 'result';
+    st.titles = A.carrotTitles(st.product, { dong: st.dong });
+    st.picked = st.titles.length ? st.titles[0].text : st.product.title;
+    st.custom = '';
+    renderSetup(box, via);
+    renderResult(box);
+    regenerate();
+  }
 
-      state.items = load();
-
-      root.innerHTML =
-        '<div class="cols">' +
-          '<div class="stack">' +
-            '<section class="panel"><h3>➕ 카드 등록 / 수정</h3>' +
-              '<p class="psub">저장하면 아래 자판기 미리보기에 바로 반영됩니다.</p>' +
-              '<div class="row2"><div class="field"><label for="dg-emoji">아이콘</label><input id="dg-emoji" type="text" maxlength="4" placeholder="🥕"></div>' +
-              '<div class="field"><label for="dg-cat">카테고리</label><select id="dg-cat">' + CATS.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('') + '</select></div></div>' +
-              '<div class="field"><label for="dg-title">제목 *</label><input id="dg-title" type="text" placeholder="예: 인터넷 가입 최대 혜택"></div>' +
-              '<div class="field"><label for="dg-benefit">혜택 / 가격 문구 *</label><input id="dg-benefit" type="text" placeholder="예: 최대 47만원 혜택"></div>' +
-              '<div class="field"><label for="dg-note">한 줄 특징</label><input id="dg-note" type="text" placeholder="예: 설치비 0원, 사은품 즉시 지급"></div>' +
-              '<div class="field"><label for="dg-url">제휴 링크</label><input id="dg-url" type="text" inputmode="url" placeholder="https://... (비워도 저장 가능)"></div>' +
-              '<div class="actions"><button class="btn btn-primary" type="button" id="dg-save">카드 추가</button>' +
-              '<button class="btn btn-ghost" type="button" id="dg-cancel" hidden>수정 취소</button></div>' +
-            '</section>' +
-            '<section class="panel"><h3>📥 일괄 자동 등록</h3>' +
-              '<p class="psub">한 줄에 하나씩 <code>상품명 | 카테고리 | 혜택 | 한줄특징 | 링크</code> 순서. 엑셀 복사(탭 구분)도 인식합니다.</p>' +
-              '<div class="field"><textarea id="dg-bulk" placeholder="인터넷 가입 최대 혜택 | 인터넷·통신 | 최대 47만원 | 설치비 0원 · 사은품 즉시 지급 | https://example.com/internet&#10;타이어 렌탈 4짝 | 렌탈·타이어 | 월 2만원대 | 교체·보관·AS 포함 | https://example.com/tire"></textarea></div>' +
-              '<div class="actions"><button class="btn btn-soft btn-block" type="button" id="dg-bulkrun">자동 파싱해서 한 번에 추가</button></div>' +
-            '</section>' +
+  function renderSetup(box, via) {
+    var p = st.product;
+    box.innerHTML =
+      '<section class="stepcard"><div class="sh"><span class="sno">1</span>' +
+        '<div><b>상세페이지</b><span class="ss">' + esc(p.domain || '직접 입력') + ' · ' + esc(via || '') + '</span></div>' +
+        '<button class="btn btn-sm btn-line sact" type="button" id="dg-restart">바꾸기</button></div>' +
+        '<div class="sumline"><em>' + esc(p.title) + '</em>' + (p.price ? ' · ' + esc(p.price) : '') + '</div>' +
+        (p.benefits && p.benefits[0] ? '<div class="sumline muted">' + esc(A.cut(p.benefits[0], 90)) + '</div>' : '') +
+      '</section>' +
+      '<section class="stepcard"><div class="sh"><span class="sno">2</span>' +
+        '<div><b>광고 설정</b><span class="ss">당근비즈니스 간편모드 기준이에요.</span></div></div>' +
+        '<div class="field"><label>광고 종류</label><div class="seg" id="dg-type">' +
+          '<button type="button" class="' + (st.adType === 'display' ? 'on' : '') + '" data-type="display">디스플레이광고</button>' +
+          '<button type="button" class="' + (st.adType === 'search' ? 'on' : '') + '" data-type="search">검색광고</button>' +
+        '</div></div>' +
+        '<div class="row2"><div class="field"><label for="dg-dong">동네</label><input id="dg-dong" type="text" value="' + esc(st.dong) + '" placeholder="예: 공덕동"></div>' +
+        '<div class="field"><label for="dg-budget">하루 예산</label><select id="dg-budget">' +
+          BUDGETS.map(function (b) { return '<option value="' + b + '"' + (st.budget === b ? ' selected' : '') + '>' + A.won(b) + '원</option>'; }).join('') +
+        '</select></div></div>' +
+        '<div class="row2"><div class="field"><label for="dg-days">기간</label><select id="dg-days">' +
+          [2, 3, 7, 14, 30].map(function (d) { return '<option value="' + d + '"' + (st.days === d ? ' selected' : '') + '>' + d + '일</option>'; }).join('') +
+        '</select></div>' +
+        '<div class="field"><label for="dg-landing">랜딩</label><select id="dg-landing">' +
+          '<option value="profile"' + (st.landing === 'profile' ? ' selected' : '') + '>비즈프로필</option>' +
+          '<option value="site"' + (st.landing === 'site' ? ' selected' : '') + '>웹사이트 URL</option>' +
+        '</select></div></div>' +
+        '<div class="field"><label>버튼</label><div class="chiprow" id="dg-btns" style="margin-top:0">' +
+          BUTTONS.map(function (b) { return '<button class="chip' + (st.button === b ? ' on' : '') + '" type="button" data-btn="' + b + '">' + b + '</button>'; }).join('') +
+        '</div></div>' +
+        '<div class="field"><label>사진 <span class="muted small">(있으면 소재에 사진을 깔아요 · 선택)</span></label>' +
+          '<div class="actions" style="margin-top:0"><label class="btn btn-line" for="dg-photo" style="cursor:pointer">📷 사진 올리기</label>' +
+          '<input id="dg-photo" type="file" accept="image/*" multiple hidden>' +
+          (st.photos.length ? '<button class="btn btn-ghost" type="button" id="dg-photoclr">사진 비우기</button>' : '') +
           '</div>' +
-          '<div class="stack">' +
-            '<section class="panel"><h3>🥕 자판기 미리보기 <span class="pill" id="dg-count">0</span></h3>' +
-              '<div class="chiprow" id="dg-chips"></div>' +
-              '<div class="dgfeed" id="dg-feed" style="margin-top:12px"></div>' +
-            '</section>' +
-            '<section class="panel"><h3>🗂 등록된 카드 <span class="pill" id="dg-admin-count">0</span></h3>' +
-              '<div id="dg-list" style="margin-top:10px"></div>' +
-              '<div class="actions"><button class="btn btn-ghost btn-sm" type="button" id="dg-reset">샘플 4개로 되돌리기</button></div>' +
-            '</section>' +
-            '<section class="panel"><h3>✍️ 홍보글 3종 자동 생성</h3>' +
-              '<div class="field"><label for="dg-cast">홍보할 카드</label><select id="dg-cast"></select></div>' +
-              '<div class="out" id="dg-castout" style="margin-top:12px"></div>' +
-            '</section>' +
-            '<section class="panel"><h3>🚀 배포용 순수 자판기 HTML</h3>' +
-              '<p class="psub">관리 기능을 뺀 고객용 페이지만 담긴 HTML 파일입니다. 파일 하나만 올리면 진짜 사이트가 됩니다.</p>' +
-              '<div class="actions"><button class="btn btn-primary btn-block" type="button" id="dg-export">배포용 HTML 다운로드</button></div>' +
-              '<p class="hint" id="dg-expsum"></p>' +
-            '</section>' +
-          '</div>' +
+          (st.photos.length ? '<p class="tip">' + st.photos.length + '장 올림 — 소재 B부터 사진 배경으로 씁니다.</p>' : '') +
+        '</div>' +
+      '</section>';
+
+    H.$('#dg-restart', box).addEventListener('click', function () { reset(); renderInput(box); renderRightEmpty(); });
+    H.$('#dg-type', box).addEventListener('click', function (e) {
+      var b = e.target.closest('[data-type]'); if (!b) return;
+      st.adType = b.getAttribute('data-type');
+      H.$$('#dg-type button', box).forEach(function (x) { x.classList.toggle('on', x === b); });
+    });
+    H.$('#dg-dong', box).addEventListener('input', function () {
+      st.dong = this.value;
+      st.titles = A.carrotTitles(st.product, { dong: st.dong });
+      renderTitles();
+    });
+    H.$('#dg-budget', box).addEventListener('change', function () { st.budget = Number(this.value); renderSetting(); });
+    H.$('#dg-days', box).addEventListener('change', function () { st.days = Number(this.value); renderSetting(); });
+    H.$('#dg-landing', box).addEventListener('change', function () { st.landing = this.value; });
+    H.$('#dg-btns', box).addEventListener('click', function (e) {
+      var b = e.target.closest('[data-btn]'); if (!b) return;
+      st.button = b.getAttribute('data-btn');
+      H.$$('#dg-btns .chip', box).forEach(function (x) { x.classList.toggle('on', x === b); });
+      regenerate();
+    });
+    H.$('#dg-photo', box).addEventListener('change', function () {
+      var files = Array.prototype.slice.call(this.files || []).slice(0, 5);
+      if (!files.length) return;
+      var loaded = 0;
+      files.forEach(function (f) {
+        A.loadImage(f).then(function (img) {
+          st.photos.push(img);
+          loaded++;
+          if (loaded === files.length) { renderSetup(box, via); regenerate(); App.toast('사진 ' + files.length + '장을 올렸어요.'); }
+        }, function (e) { App.toast(e.message); });
+      });
+      this.value = '';
+    });
+    var clr = H.$('#dg-photoclr', box);
+    if (clr) clr.addEventListener('click', function () { st.photos = []; renderSetup(box, via); regenerate(); });
+  }
+
+  function renderRightEmpty() {
+    if (!els.right) return;
+    els.right.innerHTML = '<section class="panel"><div class="empty"><b>아직 만든 광고가 없어요</b>' +
+      '왼쪽에서 상세페이지 주소를 넣고 <b>당근 광고 만들기</b>를 눌러 주세요. 제목 후보·이미지·미리보기가 여기에 나옵니다.</div></section>';
+  }
+
+  /* ---------------- 실제 결과 렌더 ---------------- */
+  var els = {};
+
+  function renderResult(rootBox) {
+    var right = els.right;
+    if (!right || !st.product) return;
+    var p = st.product;
+    right.innerHTML =
+      '<section class="panel"><h3>✏️ 광고 제목 고르기 <span class="pill" id="dg-tcount">' + st.titles.length + '</span></h3>' +
+        '<p class="psub">제목은 <b>30자</b>까지 표시돼요. 30자를 넘으면 당근에서 동네 이름이 “우리 동네”로 바뀌어 보입니다. 마음에 드는 걸 고르고 복사하세요.</p>' +
+        '<div id="dg-titles" style="margin-top:11px"></div>' +
+        '<div class="field" style="margin-top:12px"><label for="dg-custom">고른 제목 고치기</label>' +
+          '<input id="dg-custom" type="text" maxlength="60" placeholder="제목을 직접 다듬어 보세요">' +
+          '<p class="tip" id="dg-customcount">0자 / 30자</p></div>' +
+        '<div class="actions"><button class="btn btn-primary" type="button" id="dg-copyfinal">고른 제목 복사하기</button>' +
+        '<button class="btn btn-soft" type="button" id="dg-regen">제목 다시 뽑기</button></div>' +
+      '</section>' +
+      '<section class="panel"><h3>🖼 광고 이미지 <span class="pill">' + st.creatives.length + '</span></h3>' +
+        '<p class="psub">당근 규격 1080×1080 PNG. 세트마다 제목과 디자인을 다르게 만들어 A/B 테스트에 쓰세요.</p>' +
+        '<div class="creatives" id="dg-creatives" style="margin-top:12px"></div>' +
+        '<div class="actions"><button class="btn btn-soft btn-block" type="button" id="dg-allpng">이미지 전체 다운로드</button></div>' +
+      '</section>' +
+      '<section class="panel"><h3>📱 당근 피드 미리보기</h3>' +
+        '<div id="dg-feed" style="margin-top:12px"></div>' +
+      '</section>' +
+      '<section class="panel"><h3>✅ 심사 체크</h3><div id="dg-review" style="margin-top:10px"></div></section>' +
+      '<section class="panel"><h3>⚙️ 집행 설정표</h3><div id="dg-setting" style="margin-top:10px"></div>' +
+        '<div class="actions"><button class="btn btn-primary btn-block" type="button" id="dg-copyset">설정표 복사</button></div>' +
+      '</section>' +
+      '<section class="panel"><h3>📣 동네 홍보글 3종 <span class="muted small">(기존 기능)</span></h3>' +
+        '<p class="psub">당근·스레드·지역 카페에 올릴 글도 같은 상품 정보로 만들어 드려요.</p>' +
+        '<div class="out" id="dg-promo" style="margin-top:10px"></div>' +
+      '</section>';
+
+    var custom = H.$('#dg-custom', right);
+    custom.value = st.custom || '';
+    custom.addEventListener('input', function () {
+      st.custom = this.value;
+      var n = this.value.length;
+      H.$('#dg-customcount', right).textContent = n + '자 / 30자' + (n > 30 ? ' — 30자를 넘으면 동네 이름이 “우리 동네”로 보여요' : '');
+      st.picked = this.value || (st.titles[0] ? st.titles[0].text : p.title);
+      updateFeed();
+    });
+
+    H.$('#dg-copyfinal', right).addEventListener('click', function () {
+      App.copy(currentTitle(), this);
+    });
+    H.$('#dg-regen', right).addEventListener('click', function () {
+      st.titles = A.carrotTitles(p, { dong: st.dong }).reverse().slice(0, 10);
+      renderTitles();
+      App.toast('제목을 다시 뽑았어요.');
+    });
+    H.$('#dg-allpng', right).addEventListener('click', function () {
+      if (!st.creatives.length) { App.toast('이미지를 먼저 만들어 주세요.'); return; }
+      var i = 0;
+      (function next() {
+        if (i >= st.creatives.length) { App.toast('저장을 시작했어요. 여러 파일 저장을 물으면 허용해 주세요.'); return; }
+        var c = st.creatives[i++];
+        A.canvas.download(c.canvas, 'danggeun-' + c.key + '-' + Date.now().toString(36) + '.png');
+        setTimeout(next, 420);
+      })();
+    });
+    H.$('#dg-copyset', right).addEventListener('click', function () {
+      App.copy(settingText(), this);
+    });
+
+    H.$('#dg-creatives', right).addEventListener('click', function (e) {
+      var b = e.target.closest('[data-csave]');
+      if (!b) return;
+      var c = st.creatives.filter(function (x) { return x.key === b.getAttribute('data-csave'); })[0];
+      if (!c) return;
+      A.canvas.download(c.canvas, 'danggeun-' + c.key + '.png');
+      App.toast('세트 ' + c.key + ' 이미지를 저장했어요.');
+    });
+
+    renderTitles();
+    renderCreativeGrid();
+    updateFeed();
+    renderReview();
+    renderSetting();
+    renderPromo();
+  }
+
+  function currentTitle() {
+    var t = (st.custom || '').trim();
+    return t || st.picked || (st.product ? st.product.title : '');
+  }
+
+  function renderTitles() {
+    var right = els.right;
+    if (!right) return;
+    var box = H.$('#dg-titles', right);
+    if (!box) return;
+    box.innerHTML = st.titles.map(function (t, i) {
+      return '<div class="cand' + (t.text === currentTitle() ? ' pick' : '') + '">' +
+        '<span class="f">' + esc(t.formula || '제목') + '</span>' +
+        '<span class="c">' + esc(t.text) + '</span>' +
+        '<span class="n' + (t.chars > 30 ? ' over' : '') + '">' + t.chars + '</span>' +
+        '<button class="btn btn-sm btn-soft" type="button" data-pick="' + i + '">복사</button>' +
         '</div>';
+    }).join('');
+    H.$('#dg-tcount', right).textContent = st.titles.length;
+    box.onclick = function (e) {
+      var b = e.target.closest('[data-pick]');
+      if (!b) return;
+      var t = st.titles[Number(b.getAttribute('data-pick'))];
+      if (!t) return;
+      st.picked = t.text; st.custom = '';
+      H.$('#dg-custom', right).value = '';
+      H.$('#dg-customcount', right).textContent = '0자 / 30자';
+      renderTitles(); updateFeed();
+      App.copy(t.text, b);
+    };
+  }
 
-      var el = {
-        emoji: H.$('#dg-emoji', root), cat: H.$('#dg-cat', root), title: H.$('#dg-title', root),
-        benefit: H.$('#dg-benefit', root), note: H.$('#dg-note', root), url: H.$('#dg-url', root),
-        save: H.$('#dg-save', root), cancel: H.$('#dg-cancel', root),
-        bulk: H.$('#dg-bulk', root), feed: H.$('#dg-feed', root), chips: H.$('#dg-chips', root),
-        list: H.$('#dg-list', root), cast: H.$('#dg-cast', root), castout: H.$('#dg-castout', root)
-      };
+  function regenerate() {
+    if (!st.product) return;
+    var p = st.product;
+    var variants = ['carrot', 'dark', 'photo', 'clean', 'carrot'];
+    st.creatives = [];
+    for (var i = 0; i < 5; i++) {
+      var t = st.titles[i] ? st.titles[i].text : p.title;
+      var v = variants[i];
+      var photo = st.photos.length ? st.photos[i % st.photos.length] : null;
+      if (v === 'photo' && !photo) v = i % 2 ? 'clean' : 'dark';
+      var cv = paint(p, { variant: v, title: t, photo: photo });
+      st.creatives.push({ key: String.fromCharCode(65 + i), title: t, variant: v, canvas: cv });
+    }
+    renderCreativeGrid();
+    updateFeed();
+    renderReview();
+  }
 
-      function persist() { S.set('danggeun.items', state.items); }
+  function renderCreativeGrid() {
+    var right = els.right;
+    if (!right) return;
+    var box = H.$('#dg-creatives', right);
+    if (!box) return;
+    box.innerHTML = st.creatives.map(function (c) {
+      return '<div class="creative"><img src="' + c.canvas.toDataURL('image/png') + '" alt="세트 ' + c.key + ' 광고 이미지">' +
+        '<div class="cf"><span>세트 ' + c.key + '</span>' +
+        '<button class="btn btn-sm btn-soft" type="button" data-csave="' + c.key + '">저장</button></div></div>';
+    }).join('');
+  }
 
-      function renderChips() {
-        var html = '';
-        var all = ['전체'].concat(CATS);
-        for (var i = 0; i < all.length; i++) {
-          var n = all[i];
-          var c = n === '전체' ? state.items.length : state.items.filter(function (x) { return x.category === n; }).length;
-          html += '<button class="chip' + (n === state.cat ? ' on' : '') + '" type="button" data-cat="' + esc(n) + '">' + esc(n) + '<span class="n">' + c + '</span></button>';
-        }
-        el.chips.innerHTML = html;
+  function updateFeed() {
+    var right = els.right;
+    if (!right) return;
+    var box = H.$('#dg-feed', right);
+    if (!box || !st.product) return;
+    var p = st.product;
+    var img = st.creatives.length ? st.creatives[0].canvas.toDataURL('image/png') : '';
+    var t = currentTitle();
+    var priceLabel = p.price ? p.price : (p.benefits[0] ? A.cut(p.benefits[0], 22) : '조건 확인');
+    box.innerHTML = '<div class="dgphone">' +
+      '<div class="rho"><i>🥕</i><span>당근</span><span style="margin-left:auto;color:#9C9CA8;font-weight:700">' + esc(st.dong || '내 동네') + '</span></div>' +
+      '<div class="ph">' + (img ? '<img src="' + img + '" alt="광고 이미지">' : '<div class="non">소재 이미지가 여기에 나옵니다</div>') + '</div>' +
+      '<h4>' + esc(t) + '</h4>' +
+      '<div class="pr">' + esc(priceLabel) + '</div>' +
+      '<div class="mt">' + esc(st.dong || '동네') + ' · ' + esc(st.button) + ' · 광고</div>' +
+      '<div class="chipsm"><span>' + (st.adType === 'search' ? '검색광고' : '디스플레이광고') + '</span><span>' + (st.landing === 'site' ? '웹사이트' : '비즈프로필') + '</span></div>' +
+      '</div>' +
+      '<p class="hint">제목 ' + t.length + '자 · 이미지 ' + (img ? '1080×1080' : '없음') + '</p>';
+  }
+
+  function renderReview() {
+    var right = els.right;
+    if (!right) return;
+    var box = H.$('#dg-review', right);
+    if (!box || !st.product) return;
+    var text = [currentTitle()].concat(st.product.benefits || []).join(' ');
+    var found = A.bannedCheck(text);
+    var over = currentTitle().length > 30;
+    var noPhoto = !st.photos.length;
+    var rows = [];
+    if (found.length) {
+      rows.push('<div class="graybox" style="background:#FFF6F6;border-color:#FFD9D9"><b style="color:#C63A3A">금칙 표현 ' + found.length + '건</b><br>' +
+        found.map(function (f) { return esc(f.w) + ' → <b>' + esc(f.fix) + '</b>'; }).join('<br>') + '</div>');
+    } else {
+      rows.push('<div class="graybox" style="color:#158449"><b>금칙 표현 없음 ✓</b><br>최상급·보장·비방 표현이 제목과 혜택에서 발견되지 않았어요.</div>');
+    }
+    if (over) rows.push('<div class="graybox" style="margin-top:8px"><b>제목 ' + currentTitle().length + '자</b><br>30자를 넘어 동네 이름이 “우리 동네”로 표시됩니다. 줄이는 편이 좋아요.</div>');
+    if (noPhoto) rows.push('<div class="graybox" style="margin-top:8px"><b>사진을 올리면 더 좋아요</b><br>당근은 직접 찍은 자연스러운 사진이 유리합니다. 지금은 글자 소재만 있습니다.</div>');
+    rows.push('<div class="graybox" style="margin-top:8px"><b>심사 안내</b><br>영업일 1~2일. 사진·문구·랜딩·업종을 모두 봅니다. 아래 표현은 증빙이 없으면 지워 주세요.<br>' +
+      '<span class="small">최고·최저·1위·유일·완벽 / 100%·보장·무조건·부작용 없음 / 경쟁사 실명 비교 / 당근 로고·남의 사진</span></div>');
+    box.innerHTML = rows.join('');
+  }
+
+  function monthlyCost() {
+    var daily = st.budget || 0;
+    return daily * Math.min(st.days, 30);
+  }
+  function settingText() {
+    var p = st.product || {};
+    return [
+      '[당근 광고 집행 설정]',
+      '· 상품: ' + (p.title || ''),
+      '· 광고 종류: ' + (st.adType === 'search' ? '검색광고' : '디스플레이광고'),
+      '· 랜딩: ' + (st.landing === 'site' ? '웹사이트 URL · ' + (p.url || '') : '비즈프로필') + ' / 버튼: ' + st.button,
+      '· 지역: ' + (st.dong || '') + ' (최소 3만 명 이상 권장)',
+      '· 하루 예산: ' + A.won(st.budget) + '원 · 기간 ' + st.days + '일 · 최대 지출 ' + A.won(monthlyCost()) + '원',
+      '· 소재: 제목 ' + st.creatives.length + '세트 + 이미지 ' + st.creatives.length + '장',
+      '· 제목: ' + currentTitle(),
+      '',
+      '※ 클릭당 과금(CPC). 노출만으로는 지출되지 않고, 예산을 다 쓰면 그날은 멈춥니다.'
+    ].join('\n');
+  }
+  function renderSetting() {
+    var right = els.right;
+    if (!right) return;
+    var box = H.$('#dg-setting', right);
+    if (!box) return;
+    box.innerHTML =
+      '<div class="kv"><b>광고 종류</b><span>' + (st.adType === 'search' ? '검색광고 (사진+제목+소개)' : '디스플레이광고 (피드 카드형)') + '</span></div>' +
+      '<div class="kv"><b>랜딩</b><span>' + (st.landing === 'site' ? '웹사이트 URL' : '비즈프로필') + ' · 버튼 ' + esc(st.button) + '</span></div>' +
+      '<div class="kv"><b>지역</b><span>' + esc(st.dong || '—') + ' · 최소 3만 명 이상 권장</span></div>' +
+      '<div class="kv"><b>하루 예산</b><span>' + A.won(st.budget) + '원 (최소 5,000원)</span></div>' +
+      '<div class="kv"><b>기간</b><span>' + st.days + '일 · 최대 ' + A.won(monthlyCost()) + '원</span></div>' +
+      '<div class="kv"><b>소재</b><span>' + st.creatives.length + '세트 (제목·이미지 각각 다르게)</span></div>' +
+      '<p class="hint">검색광고 클릭당 최대비용은 90~100,000원. 높을수록 상단에 노출됩니다.</p>';
+  }
+
+  /* ---------------- 홍보글 (기존 기능 유지) ---------------- */
+  function promoTexts(p) {
+    var title = currentTitle();
+    var ben = (p.benefits || [])[0] || '';
+    var link = A.isLive(p.url) ? p.url : '(상세페이지 링크를 넣어 주세요)';
+    var tag = '#' + String(p.category || '동네정보').replace(/[·\s]/g, '');
+    return [
+      {
+        label: '① 당근 비즈프로필 / 동네홍보',
+        text: ['🥕 ' + title, '', ben, '', (st.dong || '동네') + ' 이웃님들께 먼저 알려드려요. 궁금한 건 편하게 채팅 주세요!',
+          '👉 ' + link, '', '#광고 #동네정보 ' + tag, DISCLOSURE].join('\n')
+      },
+      {
+        label: '② 스레드 / 인스타그램',
+        text: ['🥕 ' + title, ben, '', '요즘 제일 많이 물어보는 그거, 정리해뒀어요 👇', link, '', '저장해두고 필요할 때 보세요 🌱',
+          '#생활혜택 #동네꿀팁 #제휴링크', DISCLOSURE].join('\n')
+      },
+      {
+        label: '③ 지역 카페',
+        text: ['[정보] ' + title, '', '안녕하세요, 동네 소식 공유드립니다.', '· 혜택: ' + (ben || '-'), '· 특징: ' + A.cut((p.benefits[1] || ''), 60),
+          '· 자세히 보기: ' + link, '', '관심 있으신 분들은 링크 확인해보시고, 궁금한 점은 댓글로 남겨주세요.', '', '※ ' + DISCLOSURE].join('\n')
       }
+    ];
+  }
+  function renderPromo() {
+    var right = els.right;
+    if (!right) return;
+    var box = H.$('#dg-promo', right);
+    if (!box || !st.product) return;
+    var list = promoTexts(st.product);
+    box.innerHTML = list.map(function (v, i) {
+      return '<div class="cardout"><div class="ch"><span class="t">' + esc(v.label) + '</span>' +
+        '<button class="btn btn-sm btn-soft" type="button" data-promo="' + i + '">복사</button></div>' +
+        '<div class="cb scroll">' + esc(v.text) + '</div></div>';
+    }).join('');
+    box.onclick = function (e) {
+      var b = e.target.closest('[data-promo]');
+      if (!b) return;
+      App.copy(list[Number(b.getAttribute('data-promo'))].text, b);
+    };
+  }
 
-      function renderFeed() {
-        var list = state.cat === '전체' ? state.items : state.items.filter(function (x) { return x.category === state.cat; });
-        H.$('#dg-count', root).textContent = list.length;
-        if (!list.length) {
-          el.feed.innerHTML = '<div class="empty"><b>아직 카드가 없어요</b>왼쪽 폼이나 일괄 등록으로 추가해 보세요.</div>';
+  /* ---------------- 등록 ---------------- */
+  App.register({
+    id: 'danggeun', emoji: '🥕', name: '당근 광고 자판기', free: false, tag: '당근 · 소재',
+    desc: '상세페이지 주소 → 광고 제목 후보 10개 + 1080px 이미지 5세트 + 심사 체크.',
+    help: '상세페이지 주소를 넣으면 상품을 읽고 당근 규격(제목 30자·소재 5세트·1080×1080)에 맞춰 제목 후보 10개와 광고 이미지 5세트를 만듭니다. 금칙 표현·30자 초과·사진 유무를 자동으로 점검하고, 지역·예산·기간 집행 설정표까지 복사해 쓸 수 있습니다.',
+    render: function (root) {
+      reset();
+      var e = shell(root);
+      els.left = e.left; els.right = e.right;
+      renderInput(e.left);
+      var pickId = S.get('pick', null);
+      if (pickId) {
+        S.del('pick');
+        var p = A.products.get(pickId);
+        if (p) {
+          st.product = p;
+          setTimeout(function () { buildAll(e.left, '보관함 · ' + (p.via || '분석')); }, 30);
           return;
         }
-        el.feed.innerHTML = list.map(function (it) {
-          return '<div class="c"><div class="ic">' + esc(it.emoji || '🥕') + '</div><div style="min-width:0">' +
-            '<span class="cat">' + esc(it.category) + (it.sample ? ' · 샘플' : '') + '</span>' +
-            '<div class="t">' + esc(it.title) + '</div>' +
-            (it.benefit ? '<div class="b">' + esc(it.benefit) + '</div>' : '') +
-            (it.note ? '<div class="n">' + esc(it.note) + '</div>' : '') +
-            '<div class="small" style="margin-top:5px;color:' + (isLive(it.url) ? '#158449' : '#B0B0BC') + '">' + (isLive(it.url) ? '링크 등록됨' : '링크 없음') + '</div>' +
-            '</div></div>';
-        }).join('');
       }
-
-      function renderList() {
-        H.$('#dg-admin-count', root).textContent = state.items.length;
-        if (!state.items.length) { el.list.innerHTML = '<p class="psub">등록된 카드가 없습니다.</p>'; return; }
-        el.list.innerHTML = state.items.map(function (it) {
-          return '<div class="rowitem"><div class="ri">' + esc(it.emoji || '🥕') + '</div>' +
-            '<div class="rm"><div class="rt">' + esc(it.title) + (it.sample ? ' <span class="tag">샘플</span>' : '') + '</div>' +
-            '<div class="rs">' + esc(it.category) + ' · ' + esc(it.benefit || '혜택 문구 없음') + '</div></div>' +
-            '<button class="btn btn-sm btn-line" type="button" data-edit="' + esc(it.id) + '">수정</button>' +
-            '<button class="btn btn-sm btn-danger" type="button" data-del="' + esc(it.id) + '">삭제</button></div>';
-        }).join('');
-      }
-
-      function renderCast() {
-        var prev = el.cast.value;
-        el.cast.innerHTML = state.items.length
-          ? state.items.map(function (i) { return '<option value="' + esc(i.id) + '">' + esc(i.emoji || '🥕') + ' ' + esc(i.title) + '</option>'; }).join('')
-          : '<option value="">등록된 카드가 없어요</option>';
-        if (prev && state.items.some(function (i) { return i.id === prev; })) el.cast.value = prev;
-        renderCastOut();
-      }
-
-      function renderCastOut() {
-        var item = state.items.filter(function (i) { return i.id === el.cast.value; })[0];
-        if (!item) { el.castout.innerHTML = '<div class="empty">카드를 먼저 등록하면 홍보글이 자동으로 만들어집니다.</div>'; return; }
-        el.castout.innerHTML = castTexts(item).map(function (v, idx) {
-          return '<div class="cardout"><div class="ch"><span class="t">' + esc(v.label) + '</span><span class="m">' + esc(v.hint) + '</span>' +
-            '<button class="btn btn-sm btn-soft" type="button" data-copy-v="' + idx + '">복사</button></div>' +
-            '<div class="cb scroll">' + esc(v.text) + '</div></div>';
-        }).join('');
-        Array.prototype.forEach.call(el.castout.querySelectorAll('[data-copy-v]'), function (b) {
-          b.addEventListener('click', function () {
-            var idx = Number(b.getAttribute('data-copy-v'));
-            App.copy(castTexts(item)[idx].text, b);
-          });
-        });
-      }
-
-      function refresh() { renderChips(); renderFeed(); renderList(); renderCast(); updateSummary(); }
-
-      function updateSummary() {
-        var live = state.items.filter(function (i) { return isLive(i.url); }).length;
-        H.$('#dg-expsum', root).textContent = state.items.length
-          ? '지금 카드 ' + state.items.length + '개 중 제휴 링크가 있는 카드 ' + live + '개가 배포본에 들어갑니다.'
-          : '카드를 먼저 등록해 주세요.';
-      }
-
-      function resetForm() {
-        state.editing = null;
-        el.title.value = ''; el.benefit.value = ''; el.note.value = ''; el.url.value = ''; el.emoji.value = '';
-        el.cat.value = CATS[0];
-        el.save.textContent = '카드 추가';
-        el.cancel.hidden = true;
-        renderList();
-      }
-
-      el.chips.addEventListener('click', function (e) {
-        var b = e.target.closest('.chip'); if (!b) return;
-        state.cat = b.getAttribute('data-cat'); renderChips(); renderFeed();
-      });
-
-      el.save.addEventListener('click', function () {
-        var title = el.title.value.trim();
-        var benefit = el.benefit.value.trim();
-        if (!title) { App.toast('제목을 입력해 주세요.'); el.title.focus(); return; }
-        if (!benefit) { App.toast('혜택 문구를 입력해 주세요.'); el.benefit.focus(); return; }
-        var cat = el.cat.value;
-        var data = {
-          emoji: el.emoji.value.trim() || EMOJI[cat] || '🥕', category: cat,
-          title: title, benefit: benefit, note: el.note.value.trim(),
-          url: normalizeUrl(el.url.value), sample: false
-        };
-        if (state.editing) {
-          var idx = -1, i;
-          for (i = 0; i < state.items.length; i++) if (state.items[i].id === state.editing) idx = i;
-          if (idx !== -1) state.items[idx] = Object.assign({}, state.items[idx], data);
-          App.toast('카드를 수정했어요.');
-        } else {
-          data.id = H.uid('d');
-          state.items.push(data);
-          App.toast('카드를 추가했어요. 미리보기에 반영됐습니다.');
-        }
-        persist(); resetForm(); refresh();
-      });
-
-      el.cancel.addEventListener('click', function () { resetForm(); App.toast('수정을 취소했어요.'); });
-
-      el.list.addEventListener('click', function (e) {
-        var ed = e.target.closest('[data-edit]');
-        if (ed) {
-          var id = ed.getAttribute('data-edit');
-          var it = state.items.filter(function (x) { return x.id === id; })[0];
-          if (!it) return;
-          state.editing = id;
-          el.emoji.value = it.emoji; el.cat.value = it.category; el.title.value = it.title;
-          el.benefit.value = it.benefit; el.note.value = it.note; el.url.value = it.url;
-          el.save.textContent = '수정 저장'; el.cancel.hidden = false;
-          renderList();
-          el.title.focus();
-          App.toast('수정할 내용을 불러왔어요.');
-          return;
-        }
-        var de = e.target.closest('[data-del]');
-        if (de) {
-          var did = de.getAttribute('data-del');
-          var target = state.items.filter(function (x) { return x.id === did; })[0];
-          if (!target) return;
-          if (!window.confirm('"' + target.title + '" 카드를 삭제할까요? 되돌릴 수 없어요.')) return;
-          state.items = state.items.filter(function (x) { return x.id !== did; });
-          if (state.editing === did) resetForm();
-          persist(); refresh(); App.toast('카드를 삭제했어요.');
-        }
-      });
-
-      H.$('#dg-bulkrun', root).addEventListener('click', function () {
-        var text = el.bulk.value;
-        if (!text.trim()) { App.toast('붙여넣은 내용이 없어요.'); return; }
-        var added = [], guessed = 0, rows = H.lines(text);
-        rows.forEach(function (line) {
-          if (line.charAt(0) === '#') return;
-          var parts = line.indexOf('|') !== -1 || line.indexOf('｜') !== -1 ? line.split(/[|｜]/) : (line.indexOf('\t') !== -1 ? line.split('\t') : [line]);
-          parts = parts.map(function (p) { return p.trim(); });
-          if (!parts[0]) return;
-          var cat = matchCat(parts[1]);
-          if (!cat) { if (parts[1]) guessed++; cat = '지원금·생활'; }
-          added.push({
-            id: H.uid('d'), emoji: EMOJI[cat] || '🥕', category: cat, title: parts[0],
-            benefit: parts[2] || '', note: parts[3] || '', url: normalizeUrl(parts[4] || ''), sample: false
-          });
-        });
-        if (!added.length) { App.toast('추가할 줄을 찾지 못했어요. 형식을 확인해 주세요.'); return; }
-        state.items = state.items.concat(added);
-        persist(); el.bulk.value = ''; refresh();
-        App.toast(added.length + '개 카드를 한 번에 추가했어요!' + (guessed ? ' (카테고리를 못 읽은 ' + guessed + '개는 지원금·생활)' : ''));
-      });
-
-      el.cast.addEventListener('change', renderCastOut);
-
-      H.$('#dg-reset', root).addEventListener('click', function () {
-        if (!window.confirm('지금 등록된 카드를 모두 지우고 샘플 4개로 되돌릴까요?')) return;
-        state.items = SAMPLES.map(function (x) { return Object.assign({}, x); });
-        persist(); resetForm(); refresh(); App.toast('샘플로 되돌렸어요.');
-      });
-
-      H.$('#dg-export', root).addEventListener('click', function () {
-        if (!state.items.length) { App.toast('카드를 먼저 등록해 주세요.'); return; }
-        App.download('danggeun-japanki-public.html', buildPublicHtml(state.items), 'text/html;charset=utf-8');
-        App.toast('배포용 HTML을 내려받았어요.');
-      });
-
-      refresh();
+      e.right.innerHTML = '';
+      renderRightEmpty();
     }
   });
 })();

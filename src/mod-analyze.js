@@ -1,193 +1,418 @@
 /* =====================================================================
-   Module 8 · 🔍 사이트 분석하기 (무료)
+   Module 8 · 🔍 사이트 분석하기 (상세페이지 읽고 분석 · 보관함)
    ===================================================================== */
 (function () {
   'use strict';
-  var H = App.helpers, esc = App.esc;
+  var H = App.helpers, S = App.store, esc = App.esc, A = App.ads;
 
-  var CTA_WORDS = ['신청', '구매', '예약', '상담', '문의', '시작', '다운로드', '확인', '클릭', '가입', '장바구니', '전화', '방문', '체험', '무료', '결제', '신청하기', '예약하기'];
-  var TRUST_WORDS = ['후기', '리뷰', '별점', '인증', '보증', '환불', '교환', '고객', '수상', '언론', '안전', '보안', '누적', '만족', 'A/S', 'AS', '책임', '보험', '전문가', '실사용'];
-  var BENEFIT_WORDS = ['무료', '할인', '최대', '혜택', '지금', '오늘', '분', '초', '방법', '체크', '후기', '비교', '정리', '가이드'];
-  var URGENCY = ['지금', '오늘', '한정', '마감', '마지막', '선착', '이번 주', '당일'];
+  var state = { view: 'list', q: '', product: null, shots: [], busy: false };
 
-  function countWords(text, words) {
-    var n = 0, hits = [];
-    words.forEach(function (w) {
-      if (text.indexOf(w) !== -1) { n++; hits.push(w); }
+  function shotsHtml() {
+    if (!state.shots.length) return '';
+    return '<div class="creatives" style="margin-top:10px;grid-template-columns:repeat(auto-fill,minmax(96px,1fr))">' +
+      state.shots.map(function (s, i) {
+        return '<div class="creative"><img src="' + s + '" alt="캡처 ' + (i + 1) + '">' +
+          '<div class="cf"><span>' + (i + 1) + '장</span><button class="btn btn-sm btn-danger" type="button" data-shotdel="' + i + '">빼기</button></div></div>';
+      }).join('') + '</div>';
+  }
+
+  function listView(root) {
+    var list = A.products.list();
+    var q = state.q.trim().toLowerCase();
+    var shown = list.filter(function (p) {
+      if (!q) return true;
+      return (p.title + ' ' + p.domain + ' ' + p.category + ' ' + (p.keywords || []).join(' ')).toLowerCase().indexOf(q) !== -1;
     });
-    return { n: n, hits: hits };
+
+    root.innerHTML =
+      '<div class="panel">' +
+        '<div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">' +
+          '<div style="min-width:0"><h3>📚 사이트 분석 보관함 <span class="pill">' + list.length + '</span></h3>' +
+          '<p class="psub">나만 볼 수 있는 상품 정보예요. 한 번 분석해 두면 당근·인스타·컨닝페이퍼·카페 자판기가 그대로 가져다 씁니다.</p></div>' +
+          '<button class="btn btn-primary" type="button" id="an-new" style="margin-left:auto">＋ 새 사이트 분석</button>' +
+        '</div>' +
+        '<div class="row2" style="margin-top:14px;grid-template-columns:1fr auto;align-items:end">' +
+          '<div class="field" style="margin-top:0"><input id="an-q" type="text" placeholder="🔍 이름으로 찾기 (상품명 · 도메인 · 키워드)" value="' + esc(state.q) + '"></div>' +
+          '<button class="btn btn-line" type="button" id="an-search">검색</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="panel">' +
+        (listedHtml(shown)) +
+      '</div>';
+
+    H.$('#an-q', root).addEventListener('input', function () { state.q = this.value; });
+    H.$('#an-q', root).addEventListener('keydown', function (e) { if (e.key === 'Enter') listView(root); });
+    H.$('#an-search', root).addEventListener('click', function () { listView(root); });
+    H.$('#an-new', root).addEventListener('click', function () { state.view = 'new'; newView(root); });
+    var listBox = H.$('#an-list', root);
+    if (listBox) listBox.addEventListener('click', function (e) {
+      var it = e.target.closest('[data-pid]');
+      if (!it) return;
+      var p = A.products.get(it.getAttribute('data-pid'));
+      if (p) { state.product = p; state.view = 'detail'; detailView(root); }
+    });
   }
 
-  function analyze(raw) {
-    var text = String(raw || '').replace(/\r/g, '');
-    var trimmed = text.trim();
-    var chars = trimmed.replace(/\s/g, '').length;
-    var linesArr = trimmed.split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean);
-    var sentences = trimmed.split(/[.!?。！？\n]+/).map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 1; });
-    var avg = sentences.length ? Math.round(sentences.reduce(function (a, s) { return a + s.length; }, 0) / sentences.length) : 0;
-    var longParas = linesArr.filter(function (l) { return l.length > 220; }).length;
-    var headline = linesArr[0] || '';
-    if (headline.length > 80) {
-      var firstSentence = trimmed.split(/[.!?。！？\n]/)[0].trim();
-      if (firstSentence.length >= 6) headline = firstSentence;
+  function listedHtml(shown) {
+    if (!shown.length) {
+      return '<div class="empty"><b>아직 분석한 상품이 없어요</b>' +
+        '오른쪽 위 <b>새 사이트 분석</b>을 눌러 상세페이지 주소를 넣어 보세요. 사이트가 막혀 있으면 본문 붙여넣기나 캡처 이미지로도 됩니다.</div>';
     }
-    var firstChunk = trimmed.slice(0, 300);
-
-    var cta = countWords(trimmed, CTA_WORDS);
-    var trust = countWords(trimmed, TRUST_WORDS);
-    var benefit = countWords(headline, BENEFIT_WORDS);
-    var urgency = countWords(trimmed, URGENCY);
-    var digits = (trimmed.match(/[0-9]/g) || []).length;
-
-    var good = [], improve = [];
-
-    /* 헤드라인 */
-    var hScore = 8;
-    if (headline.length >= 8 && headline.length <= 40) { hScore += 6; good.push('첫 줄이 ' + headline.length + '자로, 한눈에 읽히는 길이입니다.'); }
-    else if (headline.length < 8) improve.push('첫 줄이 너무 짧습니다(' + headline.length + '자). "누구에게 · 무엇을 · 왜"가 들어간 12~30자 헤드라인으로 바꿔보세요.');
-    else improve.push('첫 줄이 ' + headline.length + '자로 깁니다. 30자 안쪽으로 줄이고 부연은 아래로 내리세요.');
-    if (digits > 0) { hScore += 4; good.push('숫자가 포함되어 구체적으로 읽힙니다.'); }
-    else improve.push('숫자를 하나 넣어보세요. "3분", "월 3만원", "후기 300개" 같은 숫자는 신뢰를 만듭니다.');
-    if (benefit.n > 0) { hScore += 4; good.push('헤드라인에 혜택/시간 표현(' + benefit.hits.slice(0, 3).join(', ') + ')이 있습니다.'); }
-    else improve.push('헤드라인에 혜택 단어(무료·할인·최대·지금·3분 등)를 넣으면 클릭률이 올라갑니다.');
-    if (avg > 0 && avg <= 45) hScore += 3;
-    hScore = H.clamp(hScore, 0, 25);
-
-    /* CTA */
-    var cScore = 3;
-    cScore += Math.min(13, cta.n * 3);
-    if (cta.n === 0) improve.push('행동 유도(CTA) 문구를 찾지 못했습니다. "무료로 진단받기" 같은 버튼 문구를 화면 안에 2개 이상 배치하세요.');
-    else if (cta.n <= 2) improve.push('CTA 표현이 ' + cta.n + '종류뿐입니다. 주 CTA 1개 + 보조 CTA 1개(예: 상담·자료 받기)를 두세요.');
-    else good.push('CTA 표현이 ' + cta.n + '종류(' + cta.hits.slice(0, 4).join(', ') + ')로 충분합니다.');
-    if (countWords(firstChunk, CTA_WORDS).n > 0) { cScore += 4; good.push('첫 화면 안에 CTA가 있어 바로 행동할 수 있습니다.'); }
-    else improve.push('첫 화면(스크롤 전)에 CTA가 없습니다. 첫 화면에 주 버튼 하나는 꼭 두세요.');
-    if (urgency.n > 0) { cScore += 5; good.push('즉시성을 주는 표현(' + urgency.hits.slice(0, 3).join(', ') + ')이 있습니다.'); }
-    else improve.push('즉시성 표현(오늘·한정·마감)을 하나 넣으면 미루는 비율이 줄어듭니다.');
-    cScore = H.clamp(cScore, 0, 25);
-
-    /* 신뢰 */
-    var tScore = 4 + Math.min(15, trust.n * 3);
-    if (trust.n === 0) improve.push('신뢰 요소(후기·별점·인증·환불·A/S)가 보이지 않습니다. 실제 후기 3개와 환불 조건을 넣으세요.');
-    else if (trust.n <= 2) improve.push('신뢰 요소가 ' + trust.n + '종류(' + trust.hits.join(', ') + ')입니다. 후기 수·재구매율 같은 숫자를 더하면 설득력이 커집니다.');
-    else { tScore += 6; good.push('신뢰 요소가 ' + trust.n + '종류(' + trust.hits.slice(0, 4).join(', ') + ')로 잘 갖춰져 있습니다.'); }
-    tScore = H.clamp(tScore, 0, 25);
-
-    /* 가독성 */
-    var rScore = 25;
-    if (chars < 160) { rScore -= 6; improve.push('분석할 본문이 ' + chars + '자로 적습니다. 실제 랜딩페이지 본문을 더 붙여넣으면 정확해집니다.'); }
-    if (avg > 60) { rScore -= 8; improve.push('평균 문장 길이가 ' + avg + '자로 깁니다. 35자 안쪽으로 끊으면 모바일에서 읽기 쉬워집니다.'); }
-    else if (avg > 45) { rScore -= 4; improve.push('평균 문장이 ' + avg + '자입니다. 조금만 더 짧게 끊어보세요(권장 35자 이내).'); }
-    else if (avg > 0) good.push('평균 문장 길이 ' + avg + '자로 모바일 가독성이 좋습니다.');
-    if (longParas > 0) { rScore -= Math.min(8, longParas * 3); improve.push('220자를 넘는 긴 문단이 ' + longParas + '개 있습니다. 3~4줄마다 줄바꿈하세요.'); }
-    if (linesArr.length > 0 && linesArr.length <= 2 && chars > 400) { rScore -= 4; improve.push('문단 구분이 거의 없습니다. 소제목과 줄바꿈으로 덩어리를 나누세요.'); }
-    if (chars > 1200 && !/■|▶|·|•|- /.test(trimmed)) { rScore -= 3; improve.push('목록·구분 기호가 없습니다. 혜택은 불릿으로 정리하면 스캔이 빨라집니다.'); }
-    rScore = H.clamp(rScore, 0, 25);
-
-    var total = hScore + cScore + tScore + rScore;
-    var grade = total >= 85 ? '아주 좋아요 — 바로 집행해도 됩니다' :
-      total >= 70 ? '탄탄해요 — 한두 곳만 다듬으면 완성' :
-      total >= 55 ? '괜찮지만 보완이 필요해요' :
-      total >= 40 ? '손볼 곳이 많아요' : '기본 구조부터 다시 잡아야 해요';
-
-    return {
-      total: total, grade: grade,
-      parts: [
-        { label: '헤드라인', score: hScore }, { label: 'CTA', score: cScore },
-        { label: '신뢰 요소', score: tScore }, { label: '가독성', score: rScore }
-      ],
-      good: good, improve: improve,
-      stats: { chars: chars, sentences: sentences.length, avg: avg, lines: linesArr.length, cta: cta.n, trust: trust.n }
-    };
+    return '<div class="prodgrid" id="an-list">' + shown.map(function (p) {
+      return '<button class="proditem" type="button" data-pid="' + esc(p.id) + '">' +
+        '<span class="pi">' + esc(p.emoji || '🧩') + '</span>' +
+        '<span class="pd">' + esc((p.savedAt || p.createdAt || '').slice(0, 10)) + (p.category ? ' · ' + esc(p.category) : '') + '</span>' +
+        '<b>' + esc(p.title) + '</b>' +
+        '<p>' + (p.domain ? esc(p.domain) + ' — ' : '') + esc(A.cut((p.benefits || [])[0] || (p.text || ''), 74)) + '</p>' +
+        '</button>';
+    }).join('') + '</div>';
   }
 
-  App.register({
-    id: 'analyze', emoji: '🔍', name: '사이트 분석하기', free: true, tag: '무료 · 진단',
-    desc: '랜딩페이지 카피를 점수화하고 개선점을 바로 제안합니다.',
-    help: '브라우저 보안(CORS) 때문에 남의 사이트를 자동으로 읽을 수는 없습니다. 랜딩페이지 본문을 붙여넣으면 헤드라인·CTA·신뢰요소·가독성을 100점으로 점수화하고 개선점을 제안합니다. URL 직접 분석은 김호퍼에게 요청 문구를 복사해 맡기세요.',
-    render: function (root) {
-      root.innerHTML =
-        '<div class="notice" style="margin-bottom:14px">🔍 <div><strong>정적 페이지의 CORS 제약을 먼저 알려드려요.</strong><br>' +
-        '이 페이지는 브라우저에서만 돌아가기 때문에, 다른 사이트의 HTML을 직접 가져와 읽을 수 없습니다(브라우저 보안 정책). ' +
-        '그래서 <b>(a) 본문을 붙여넣으면 즉시 분석</b>하고, <b>(b) URL을 김호퍼에게 넘겨 실제 페이지 분석을 요청</b>하는 두 가지 길을 드립니다.</div></div>' +
-        '<div class="cols">' +
-          '<div class="stack"><section class="panel"><h3>a) 즉시 분석</h3>' +
-            '<div class="field"><label for="an-url">랜딩페이지 URL <span class="muted small">(기록용)</span></label><input id="an-url" type="text" placeholder="https://..."></div>' +
-            '<div class="field"><label for="an-text">본문 / 카피 붙여넣기 *</label><textarea id="an-text" style="min-height:200px" placeholder="페이지의 제목, 첫 문단, 버튼 문구, 후기 등을 그대로 복사해 붙여넣으세요."></textarea></div>' +
-            '<div class="actions"><button class="btn btn-primary btn-block" type="button" id="an-run">지금 분석하기</button></div>' +
-            '<p class="hint">헤드라인 · CTA · 신뢰 요소 · 모바일 가독성 4개 항목을 각 25점으로 채점합니다.</p>' +
-            '<div class="field" style="margin-top:16px"><label>샘플로 해보기</label>' +
-            '<div class="chiprow" style="margin-top:0"><button class="chip" type="button" data-sample="bad">개선 필요한 예시</button>' +
-            '<button class="chip" type="button" data-sample="good">잘 만든 예시</button></div></div>' +
+  function newView(root) {
+    root.innerHTML =
+      '<div class="notice" style="margin-bottom:14px">🔗 <div><strong>상세페이지 주소를 넣으면 자동으로 읽고 분석합니다.</strong><br>' +
+      '브라우저에서 남의 사이트를 바로 읽을 수는 없어서, 공개 리더를 <b>3경로</b>로 차례로 시도합니다. 모두 막히면 <b>본문 붙여넣기</b>·<b>캡처 이미지</b>로 이어서 분석할 수 있어요.</div></div>' +
+      '<div class="cols">' +
+        '<div class="stack">' +
+          '<section class="panel"><h3>1 · 상세페이지 주소</h3>' +
+            '<div class="field"><label for="an-url">상세페이지 링크</label>' +
+            '<input id="an-url" type="text" inputmode="url" placeholder="https://... 상품 상세페이지 주소를 넣어 주세요"></div>' +
+            '<div class="actions"><button class="btn btn-primary btn-block" type="button" id="an-run">사이트 읽고 분석하기</button></div>' +
+            '<p class="hint">스마트스토어·쿠팡처럼 로그인/차단이 강한 사이트는 읽기가 거절될 수 있어요. 그때는 아래 2번을 써 주세요.</p>' +
+            '<div class="chiprow" id="an-samplebar" style="margin-top:12px">' +
+              '<button class="chip" type="button" data-sample="tyre">예시로 먼저 해보기</button>' +
+            '</div>' +
           '</section>' +
-          '<section class="panel"><h3>b) 김호퍼에게 URL 직접 분석 맡기기</h3>' +
-            '<p class="psub">김호퍼는 실제로 페이지를 열어 첫 화면 구성·버튼 위치·모바일 화면까지 볼 수 있습니다. 아래 요청 문구를 복사해 채팅에 붙여넣으세요.</p>' +
-            '<div class="cardout" style="margin-top:10px"><div class="ch"><span class="t">요청 문구</span><button class="btn btn-sm btn-soft" type="button" id="an-copyreq">복사</button></div>' +
-            '<div class="cb mono" id="an-req" style="max-height:230px;overflow:auto"></div></div>' +
-          '</section></div>' +
-          '<div class="stack"><section class="panel"><h3>📊 분석 결과</h3>' +
-            '<div id="an-result" style="margin-top:12px"><div class="empty"><b>아직 분석한 페이지가 없어요</b>왼쪽에 본문을 붙여넣고 분석을 눌러주세요.</div></div>' +
-          '</section></div>' +
-        '</div>';
+          '<section class="panel"><h3>2 · 사이트가 막혔을 때</h3>' +
+            '<div class="field"><label for="an-text">페이지 본문 붙여넣기</label>' +
+            '<textarea id="an-text" style="min-height:170px" placeholder="상세페이지에서 제목·혜택·가격·신청 방법·주의사항을 그대로 복사해 붙여넣으세요."></textarea></div>' +
+            '<div class="field"><label>캡처 이미지 등록 <span class="muted small">(여러 장 가능)</span></label>' +
+            '<div class="actions" style="margin-top:0"><label class="btn btn-line" for="an-shot" style="cursor:pointer">📷 캡처 올리기</label>' +
+            '<input id="an-shot" type="file" accept="image/*" multiple hidden></div>' +
+            '<p class="tip">캡처는 컨닝페이퍼·소재 이미지의 원본으로 쓰입니다. 글자는 위 본문 칸에 붙여넣어 주세요.</p>' +
+            '<div id="an-shots">' + shotsHtml() + '</div></div>' +
+            '<div class="actions"><button class="btn btn-soft btn-block" type="button" id="an-runtext">붙여넣은 본문으로 분석하기</button></div>' +
+          '</section>' +
+        '</div>' +
+        '<div class="stack">' +
+          '<section class="panel"><h3>3 · 분석 진행</h3><div id="an-progress" style="margin-top:12px">' +
+            '<div class="empty"><b>아직 분석을 시작하지 않았어요</b>주소를 넣고 버튼을 누르면 진행 상황이 여기에 표시됩니다.</div>' +
+          '</div><div id="an-err"></div></section>' +
+          '<section class="panel"><h3>📋 분석에서 뽑는 것</h3>' +
+            '<div class="kv"><b>신청 조건</b><span>무엇을·누가·얼마에·어떻게 신청하는지 + 출처 문장</span></div>' +
+            '<div class="kv"><b>고객 3명</b><span>이 상품을 살 만한 사람을 구체적으로</span></div>' +
+            '<div class="kv"><b>소구점 5개</b><span>광고에서 어떤 장점을 앞세울지</span></div>' +
+            '<div class="kv"><b>주의 조건</b><span>쓰면 안 되는 표현, 빠뜨리면 안 되는 고지</span></div>' +
+            '<p class="hint">뽑은 결과는 보관함에 저장되고, 다른 자판기가 <b>“전에 등록한 상품 불러오기”</b>로 가져갑니다.</p>' +
+          '</section>' +
+        '</div>' +
+      '</div>';
 
-      var el = { url: H.$('#an-url', root), text: H.$('#an-text', root), res: H.$('#an-result', root), req: H.$('#an-req', root) };
+    var el = {
+      url: H.$('#an-url', root), text: H.$('#an-text', root), file: H.$('#an-shot', root),
+      prog: H.$('#an-progress', root), err: H.$('#an-err', root)
+    };
 
-      function requestText() {
-        var url = el.url.value.trim() || '(URL을 입력하세요)';
-        return '김호퍼, 아래 사이트를 직접 열어서 광고 관점으로 분석해줘.\n\n' +
-          'URL: ' + url + '\n\n' +
-          '보고 싶은 것\n' +
-          '1. 첫 화면에서 3초 안에 "무엇을 파는지" 이해되는가 — 헤드라인·서브카피\n' +
-          '2. CTA는 몇 개이고, 가장 눈에 띄는 것은 무엇인가\n' +
-          '3. 신뢰 요소(후기·인증·환불·수치)가 충분한가\n' +
-          '4. 모바일 화면에서 읽기 편한가 — 줄 길이·여백·폰트\n' +
-          '5. 개선 우선순위 3가지 + 바로 바꿀 수 있는 카피 예시\n\n' +
-          '가능하면 실제 화면 스크린샷도 같이 보여줘.';
-      }
-
-      function renderReq() { el.req.textContent = requestText(); }
-
-      var SAMPLES = {
-        bad: '좋은 제품입니다. 저희는 오래전부터 좋은 물건을 만들기 위해 노력해왔으며 많은 고객님들께 사랑을 받고 있습니다. 품질은 물론 디자인까지 뛰어나며 가격 또한 합리적입니다. 자세한 내용은 홈페이지를 참고해 주시기 바랍니다. 문의는 게시판을 이용해 주세요. 감사합니다.',
-        good: '하루 3분, 허리 통증 관리 루틴\n\n· 30일 사용 후기 1,200개 · 평균 4.8점\n· 첫 달 무료 체험 · 언제든 해지\n· 물리치료사 3인이 설계한 12가지 동작\n\n지금 무료로 시작하기 →\n결제 없이 7일 동안 사용해 보세요. 오늘 가입 시 1:1 자세 코칭을 함께 드립니다.\n\n"허리 때문에 병원만 다녔는데, 3주 만에 앉아있는 시간이 편해졌어요." — 김○○님 후기'
-      };
-
-      H.$('#an-run', root).addEventListener('click', function () {
-        var text = el.text.value;
-        if (!text.trim()) { App.toast('분석할 본문을 먼저 붙여넣어 주세요.'); el.text.focus(); return; }
-        var r = analyze(text);
-        var parts = r.parts.map(function (p) {
-          return '<div class="mrow"><span class="lb">' + p.label + '</span><div class="meter"><i style="width:' + (p.score / 25 * 100) + '%"></i></div><span class="vl">' + p.score + '</span></div>';
-        }).join('');
-        el.res.innerHTML =
-          '<div class="score"><div class="num">' + r.total + '<small>/100</small></div><div class="grade">' + esc(r.grade) + '</div></div>' +
-          '<div style="margin-top:14px">' + parts + '</div>' +
-          '<div class="sep"></div>' +
-          '<div class="kv"><b>글자 수</b><span>' + r.stats.chars + '자 · 문장 ' + r.stats.sentences + '개 · 평균 ' + r.stats.avg + '자</span></div>' +
-          '<div class="kv"><b>CTA 후보</b><span>' + r.stats.cta + '종 · 신뢰 요소 ' + r.stats.trust + '종</span></div>' +
-          '<div class="sep"></div>' +
-          '<h3 style="font-size:13.5px">✓ 잘한 점</h3>' +
-          '<ul style="margin:8px 0 0;padding-left:18px;font-size:12.5px;line-height:1.8;color:#3A3A44">' +
-            (r.good.length ? r.good.map(function (g) { return '<li>' + esc(g) + '</li>'; }).join('') : '<li class="muted">뚜렷한 강점이 아직 보이지 않습니다.</li>') + '</ul>' +
-          '<h3 style="font-size:13.5px;margin-top:16px">→ 개선할 점</h3>' +
-          '<ul style="margin:8px 0 0;padding-left:18px;font-size:12.5px;line-height:1.8;color:#3A3A44">' +
-            (r.improve.length ? r.improve.map(function (g) { return '<li>' + esc(g) + '</li>'; }).join('') : '<li>바로 고칠 곳이 없습니다. 좋은 상태예요.</li>') + '</ul>' +
-          '';
-        App.toast('분석을 마쳤어요. 점수 ' + r.total + '점.');
+    H.$('#an-shot', root).addEventListener('change', function () {
+      var files = Array.prototype.slice.call(this.files || []);
+      files.slice(0, 8).forEach(function (f) {
+        A.fileToDataUrl(f).then(function (d) {
+          state.shots.push(d);
+          H.$('#an-shots', root).innerHTML = shotsHtml();
+        }, function (e) { App.toast(e.message); });
       });
+      this.value = '';
+    });
+    H.$('#an-shots', root).addEventListener('click', function (e) {
+      var b = e.target.closest('[data-shotdel]');
+      if (!b) return;
+      state.shots.splice(Number(b.getAttribute('data-shotdel')), 1);
+      H.$('#an-shots', root).innerHTML = shotsHtml();
+    });
 
-      root.addEventListener('click', function (e) {
-        var s = e.target.closest('[data-sample]');
-        if (s) {
-          el.text.value = SAMPLES[s.getAttribute('data-sample')] || '';
-          App.toast('샘플 본문을 넣었어요. 분석하기를 눌러보세요.');
+    H.$('#an-samplebar', root).addEventListener('click', function (e) {
+      var sm = e.target.closest('[data-sample]');
+      if (!sm) return;
+      el.text.value = SAMPLE_TEXT;
+      el.url.value = 'https://example-mall.com/tire-rental';
+      App.toast('예시 본문을 넣었어요. “붙여넣은 본문으로 분석하기”를 눌러보세요.');
+    });
+
+    function rowsFor(reading) {
+      return reading ? [
+        { label: '주소 확인' }, { label: '페이지 읽기' }, { label: '본문 정리' },
+        { label: '신청 조건 추출' }, { label: '고객·소구점 만들기' }, { label: '보관함 저장' }
+      ] : [
+        { label: '본문 정리' }, { label: '신청 조건 추출' }, { label: '고객·소구점 만들기' }, { label: '보관함 저장' }
+      ];
+    }
+    function mountProgress(rows) {
+      el.prog.innerHTML = A.progressHtml('분석 중', rows);
+      var box = H.$('.aiwork', el.prog);
+      return {
+        set: function (i, st, msg) {
+          var r = H.$('[data-prow="' + i + '"]', box);
+          if (!r) return;
+          r.className = 'airow' + (st ? ' ' + st : '');
+          if (msg) H.$('.pmsg', r).textContent = msg;
+        },
+        head: function (t) { H.$('.aih b', box).textContent = t; },
+        done: function (t, warn) {
+          var h = H.$('.aih', box);
+          H.$('.spin', h).style.animation = 'none';
+          H.$('.spin', h).style.borderColor = warn ? '#E0B04F' : '#15A05C';
+          H.$('.spin', h).style.background = warn ? '#E0B04F' : '#15A05C';
+          H.$('.spin', h).style.border = '0';
+          h.style.color = warn ? '#B4551A' : '#158449';
+          if (t) H.$('.aih b', box).textContent = t;
+        }
+      };
+    }
+
+    function finish(p) {
+      var saved = A.products.save(p);
+      state.product = saved;
+      setTimeout(function () {
+        state.view = 'detail';
+        detailView(root);
+        App.toast('분석을 마쳤어요. “' + A.cut(saved.title, 18) + '” 보관함에 저장했습니다.');
+      }, 480);
+    }
+
+    function runText(text, rawTitle, url, via) {
+      if (!text || text.replace(/\s/g, '').length < 80) { App.toast('본문이 너무 짧아요. 80자 이상 붙여넣어 주세요.'); el.text.focus(); return; }
+      state.busy = true;
+      var ui = mountProgress(rowsFor(false));
+      ui.set(0, 'on', text.replace(/\s/g, '').length + '자');
+      ui.set(1, 'run');
+      var p = A.analyze({ text: text, url: url, via: via, rawTitle: rawTitle, id: state.reshootId || null });
+      p.shots = state.shots.slice(0, 4);
+      ui.set(1, 'on', '필드 6개');
+      ui.set(2, 'run');
+      setTimeout(function () {
+        ui.set(2, 'on', '고객 3 · 소구점 ' + p.points.length);
+        ui.set(3, 'run');
+        setTimeout(function () {
+          ui.set(3, 'on', '저장 완료');
+          ui.done('분석 완료 · 보관함에 담았어요');
+          state.busy = false;
+          finish(p);
+        }, 220);
+      }, 260);
+    }
+
+    H.$('#an-runtext', root).addEventListener('click', function () {
+      runText(el.text.value, '', A.normalizeUrl(el.url.value), state.shots.length ? '캡처 + 붙여넣기' : '본문 붙여넣기');
+    });
+
+    H.$('#an-run', root).addEventListener('click', function () {
+      var url = A.normalizeUrl(el.url.value);
+      if (!url) { App.toast('주소 형식이 아니에요. https://... 를 넣어 주세요.'); el.url.focus(); return; }
+      if (state.busy) { App.toast('지금 분석 중이에요.'); return; }
+      state.busy = true;
+      var ui = mountProgress(rowsFor(true));
+      ui.set(0, 'on', A.domainOf(url));
+      ui.set(1, 'run', '여러 경로 시도');
+      var tryLog = [];
+      A.readPage(url, function (st) {
+        if (st.phase === 'try') { ui.set(1, 'run', st.label + ' 시도'); }
+        if (st.phase === 'ok') { ui.set(1, 'run', st.label + ' · ' + st.chars + '자'); }
+        if (st.phase === 'fail') {
+          tryLog.push(st.label + ' 실패: ' + st.msg);
+          ui.set(1, 'run', st.label + ' 실패 → 다음 경로');
+        }
+      }).then(function (res) {
+        ui.set(1, 'on', res.via + ' · ' + res.text.replace(/\s/g, '').length + '자');
+        ui.set(2, 'run');
+        var p = A.analyze({ text: res.text, url: url, via: res.via, rawTitle: res.title });
+        p.shots = state.shots.slice(0, 4);
+        p.rawTitle = res.title || '';
+        ui.set(2, 'on', '필드 6개 · 출처 문장 ' + p.fields.filter(function (f) { return f.source; }).length + '개');
+        ui.set(3, 'run');
+        setTimeout(function () {
+          ui.set(3, 'on', '고객 3 · 소구점 ' + p.points.length);
+          ui.set(4, 'run');
+          setTimeout(function () {
+            ui.set(4, 'on', '저장 완료');
+            ui.done('분석 완료 · ' + res.via + '로 읽었어요');
+            state.busy = false;
+            finish(p);
+          }, 240);
+        }, 240);
+      }).catch(function (err) {
+        state.busy = false;
+        ui.set(1, 'bad', '모든 경로 실패');
+        ui.set(2, 'bad', '중단');
+        ui.done('읽지 못했어요', true);
+        el.err.innerHTML = '<div class="notice" style="margin-top:12px;background:#FFF6F6;border-color:#FFD9D9;color:#8A2F2F">' +
+          '<div><strong>이 페이지는 읽기가 막혔어요.</strong><br>' + esc(err.message) +
+          (err.tries ? '<br><span class="small">' + err.tries.map(function (t) { return esc(t.label + ': ' + t.msg); }).join(' · ') + '</span>' : '') +
+          '<br><br>① 아래 <b>본문 붙여넣기</b>에 페이지 글자를 그대로 붙여넣거나 ② <b>캡처 이미지</b>를 올린 뒤 다시 분석해 주세요. 두 방법 모두 같은 분석이 나옵니다.' +
+          '</div></div>';
+      });
+    });
+  }
+
+  function detailView(root) {
+    var p = state.product;
+    if (!p) { state.view = 'list'; listView(root); return; }
+    var cond = p.fields || [];
+
+    root.innerHTML =
+      '<div class="panel">' +
+        '<div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">' +
+          '<span class="mico" style="width:44px;height:44px;flex:none;display:grid;place-items:center;font-size:22px;background:var(--violet-soft);border-radius:12px">' + esc(p.emoji || '🧩') + '</span>' +
+          '<div style="min-width:0;flex:1">' +
+            '<h3 style="font-size:16px">' + esc(p.title) + '</h3>' +
+            '<p class="psub">' + (p.domain ? esc(p.domain) + ' · ' : '') + esc(p.category) + ' · ' + esc((p.savedAt || p.createdAt || '').slice(0, 10)) + ' 수정' + (p.via ? ' · ' + esc(p.via) : '') + '</p>' +
+            '<div class="chiprow" style="margin-top:9px">' +
+              (p.price ? '<span class="tag ok">' + esc(p.price) + '</span>' : '') +
+              (p.discount ? '<span class="tag">' + esc(p.discount) + '</span>' : '') +
+              (p.keywords || []).slice(0, 5).map(function (k) { return '<span class="tag">#' + esc(k) + '</span>'; }).join('') +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+            '<button class="btn btn-sm btn-line" type="button" id="an-back">목록으로</button>' +
+            '<button class="btn btn-sm btn-line" type="button" id="an-edit">내용 수정</button>' +
+            '<button class="btn btn-sm btn-danger" type="button" id="an-del">삭제</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="panel"><h3>📌 상품의 신청 조건</h3>' +
+        '<p class="psub">페이지와 가이드에서 읽은 내용이에요. 확정한 조건을 확인해 주세요. 직접 고치면 “직접 수정”으로 표시돼요.</p>' +
+        '<div id="an-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:12px">' +
+          cond.map(fieldHtml).join('') +
+        '</div>' +
+      '</div>' +
+
+      '<div class="panel"><h3>👥 광고를 보여 줄 고객 3가지</h3>' +
+        '<p class="psub">페르소나: 상품에 관심을 가질 만한 고객을 구체적으로 그린 모습이에요. ✨ 실사용 고객 조사 결과와는 다를 수 있어요.</p>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:11px;margin-top:12px">' +
+          (p.personas || []).map(function (x, i) {
+            return '<div class="pcard"><span class="pn">고객 ' + (i + 1) + '</span><b>' + esc(x.name) + '</b><p>' + esc(x.desc) + '</p></div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+
+      '<div class="panel"><h3>🎯 광고에서 강조할 점 5가지</h3>' +
+        '<p class="psub">소구점: 고객의 마음을 움직이기 위해 어떤 장점을 앞세울지 정한 방향이에요. 실제 조건을 확인한 뒤 사용하세요.</p>' +
+        '<div style="display:flex;flex-direction:column;gap:9px;margin-top:12px">' +
+          (p.points || []).map(function (x, i) {
+            return '<div class="ptcard"><div style="display:flex;align-items:center;gap:8px"><span class="num">' + (i + 1) + '</span>' +
+              '<b style="margin:0;flex:1">' + esc(x.title) + '</b></div>' +
+              '<p>' + esc(x.desc) + '</p>' +
+              (x.persona ? '<div class="tags"><span class="tag">' + esc(x.persona) + '</span></div>' : '') + '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+
+      '<div class="panel"><h3>🚀 이 상품으로 바로 만들기</h3>' +
+        '<p class="psub">상품 정보를 그대로 넘겨서 소재를 만듭니다.</p>' +
+        '<div class="chiprow" id="an-send" style="margin-top:10px">' +
+          '<button class="chip" type="button" data-send="danggeun">🥕 당근 광고</button>' +
+          '<button class="chip" type="button" data-send="insta">📸 인스타 캐러셀</button>' +
+          '<button class="chip" type="button" data-send="cheat">🥷 컨닝페이퍼</button>' +
+          '<button class="chip" type="button" data-send="cafe">☕ 카페 글</button>' +
+        '</div>' +
+      '</div>' +
+
+      (p.shots && p.shots.length ? '<div class="panel"><h3>🖼 등록한 캡처 <span class="pill">' + p.shots.length + '</span></h3>' +
+        '<div class="creatives" style="margin-top:12px">' + p.shots.map(function (s, i) {
+          return '<div class="creative"><img src="' + s + '" alt="캡처 ' + (i + 1) + '"><div class="cf"><span>' + (i + 1) + '장</span></div></div>';
+        }).join('') + '</div></div>' : '') +
+
+      '<div class="panel"><h3>📄 읽어 온 원문 <span class="pill">' + ((p.text || '').replace(/\s/g, '').length) + '자</span></h3>' +
+        '<div class="cardout" style="margin-top:10px"><div class="cb scroll mono" style="font-size:11.5px;line-height:1.75">' + esc(A.cut(p.text || '', 4000)) + '</div></div>' +
+        (p.url ? '<div class="actions"><a class="btn btn-ghost" href="' + esc(p.url) + '" target="_blank" rel="noopener noreferrer">원본 페이지 열기 ↗</a></div>' : '') +
+      '</div>';
+
+    H.$('#an-back', root).addEventListener('click', function () { state.view = 'list'; listView(root); });
+    H.$('#an-del', root).addEventListener('click', function () {
+      if (!window.confirm('“' + p.title + '” 분석을 보관함에서 지울까요?')) return;
+      A.products.remove(p.id);
+      state.view = 'list'; listView(root);
+      App.toast('보관함에서 지웠어요.');
+    });
+    H.$('#an-edit', root).addEventListener('click', function () { editView(root); });
+    H.$('#an-send', root).addEventListener('click', function (e) {
+      var b = e.target.closest('[data-send]');
+      if (!b) return;
+      S.set('pick', p.id);
+      App.toast('“' + A.cut(p.title, 18) + '”을 넘겼어요.');
+      App.go(b.getAttribute('data-send'));
+    });
+  }
+
+  function fieldHtml(f) {
+    return '<div class="fieldcard">' +
+      '<div class="fh"><b>' + esc(f.label) + '</b>' +
+      (f.badge === '페이지에서 추출' ? '<span class="badge-green">페이지에서 추출</span>' : '<span class="badge-amber">확인 필요</span>') + '</div>' +
+      '<div class="fv">' + esc(f.value || '확인 필요') + '</div>' +
+      (f.source ? '<div class="fs"><b>출처 문장</b> — ' + esc(A.cut(f.source, 160)) + '</div>' : '') +
+      '</div>';
+  }
+
+  function editView(root) {
+    var p = state.product;
+    var fields = p.fields || [];
+    root.innerHTML =
+      '<div class="panel"><h3>✏️ 내용 수정</h3>' +
+        '<p class="psub">페이지에서 잘못 읽은 값만 고치면 됩니다. 고친 칸은 “직접 수정”으로 표시돼요.</p>' +
+        '<div class="field"><label for="ed-title">상품 이름</label><input id="ed-title" type="text" value="' + esc(p.title) + '"></div>' +
+        '<div class="row2"><div class="field"><label for="ed-price">가격</label><input id="ed-price" type="text" value="' + esc(p.price || '') + '" placeholder="예: 월 3,000원부터"></div>' +
+        '<div class="field"><label for="ed-benefit">대표 혜택 (한 줄)</label><input id="ed-benefit" type="text" value="' + esc((p.benefits || [])[0] || '') + '"></div></div>' +
+        fields.map(function (f, i) {
+          return '<div class="field"><label>' + esc(f.label) + '</label><textarea data-fedit="' + i + '" style="min-height:70px">' + esc(f.value === '확인 필요' ? '' : f.value) + '</textarea></div>';
+        }).join('') +
+        '<div class="actions"><button class="btn btn-primary" type="button" id="ed-save">저장</button>' +
+        '<button class="btn btn-ghost" type="button" id="ed-cancel">취소</button></div>' +
+      '</div>';
+    H.$('#ed-cancel', root).addEventListener('click', function () { detailView(root); });
+    H.$('#ed-save', root).addEventListener('click', function () {
+      p.title = H.$('#ed-title', root).value.trim() || p.title;
+      p.price = H.$('#ed-price', root).value.trim();
+      var b0 = H.$('#ed-benefit', root).value.trim();
+      if (b0) p.benefits = [b0].concat((p.benefits || []).slice(1));
+      Array.prototype.forEach.call(root.querySelectorAll('[data-fedit]'), function (t) {
+        var i = Number(t.getAttribute('data-fedit'));
+        var v = t.value.trim();
+        if (fields[i] && v && v !== fields[i].value) {
+          fields[i].value = v;
+          fields[i].badge = '직접 수정';
         }
       });
+      A.products.save(p);
+      state.product = A.products.get(p.id) || p;
+      detailView(root);
+      App.toast('수정 내용을 저장했어요.');
+    });
+  }
 
-      el.url.addEventListener('input', renderReq);
-      H.$('#an-copyreq', root).addEventListener('click', function () {
-        App.copy(requestText(), this);
-      });
-      renderReq();
+  var SAMPLE_TEXT = [
+    '넥센타이어 최고급형 4본 렌탈 — 월 3,000원부터',
+    '타이어 4본 교체, 제휴카드 적용 시 월 3,000원(월 렌탈료 21,000원에서 우리카드Ⅱ 청구할인 18,000원 적용).',
+    '최고급형·시그니처 4본 렌탈 시 장착 후 신세계 상품권 3만 원 증정. 장착 등록비 5만 원 면제, 장착 후 신세계 상품권 3만 원 증정.',
+    '렌탈 기간 동안 타이어 보관과 위치 교환, 펑크 수리까지 무료로 지원합니다.',
+    '6개월마다 정기 점검을 제공하며 위치 교환과 월 얼라이먼트도 각 1회 무료입니다.',
+    '렌탈 불가 차종은 1톤, 봉고, 포터, 트럭류, 밴, 콜로라도 및 21인치 이상 타이어 장착 차량으로 안내합니다.',
+    '일부 차량은 상담 후 이용이 어려울 수 있습니다. 월 3,000원은 우리카드Ⅱ 제휴카드 적용 기준이며 카드 조건에 따라 달라집니다.',
+    '신청 대상은 렌탈 가능한 승용차 보유 고객이며, 법인 차량은 별도 상담이 필요합니다.',
+    '이름과 연락처를 남겨 상담을 신청하면, 렌탈 진행 여부를 상담 후 정합니다.',
+    '상담 신청은 홈페이지 신청서 또는 전화로 가능하며, 평일 오전 10시부터 오후 6시까지 상담합니다.',
+    '자세한 조건은 상담 시 안내드리며, 프로모션은 2026년 11월 29일까지 선착순 50명 모집입니다.',
+    '주차가 어려운 매장은 방문 전에 전화로 확인해 주세요.'
+  ].join('\n');
+
+  App.register({
+    id: 'analyze', emoji: '🔍', name: '사이트 분석하기', free: true, tag: '무료 · 분석',
+    desc: '상세페이지 주소를 넣으면 신청 조건·고객·소구점을 뽑아 보관함에 저장합니다.',
+    help: '상세페이지 주소를 넣으면 공개 리더 3경로로 읽고, 신청 조건 6칸(출처 문장 포함)·고객 3명·소구점 5개를 만들어 보관함에 저장합니다. 사이트가 막히면 본문 붙여넣기나 캡처 이미지로 이어서 분석합니다. 저장한 상품은 당근·인스타·컨닝페이퍼·카페 자판기가 그대로 불러다 씁니다.',
+    render: function (root) {
+      state = { view: 'list', q: '', product: null, shots: [], busy: false };
+      root.innerHTML = '<div id="an-root"></div>';
+      var box = H.$('#an-root', root);
+      if (state.view === 'list') listView(box);
     }
   });
 })();

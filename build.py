@@ -6,6 +6,8 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(BASE, 'src')
 ORDER = [
     'core.js',
+    'lib-ads.js',
+    'data-lotto.js',
     'saju-core.js',
     'quiz-core.js',
     'daily-core.js',
