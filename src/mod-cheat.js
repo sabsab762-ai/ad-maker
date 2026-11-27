@@ -126,8 +126,8 @@
       C.roundRect(ctx, bx, byy, bw, bh, 24); ctx.fill();
       ctx.restore();
       var icons = ['🎁', '🚚', '🛠', '✅', '💳', '📦'];
-      ctx.font = '64px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
-      ctx.fillText(icons[i % icons.length], bx + 24, byy + 22);
+      ctx.font = '56px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
+      ctx.fillText(icons[i % icons.length], bx + 26, byy + 26);
       ctx.font = '800 30px Pretendard, "Apple SD Gothic Neo", sans-serif';
       ctx.fillStyle = '#111';
       var tl = C.wrap(ctx, b, bw - 130);

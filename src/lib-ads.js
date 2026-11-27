@@ -929,11 +929,33 @@
     if (p.forWhom[0]) subs.push(cut(p.forWhom[0], 46));
     subs.push(cut((p.cautions[0] ? p.cautions[0] : '자세한 조건은 신청 페이지에서 확인하세요'), 46));
     var bullets = [];
-    (ben.length ? ben : p.points.map(function (x) { return x.title; })).slice(0, 4).forEach(function (b) { bullets.push(cut(b, 34)); });
+    (ben.length ? ben : p.points.map(function (x) { return x.title; })).forEach(function (b) {
+      if (bullets.length >= 4) return;
+      var v = cut(b, 32);
+      for (var i = 0; i < bullets.length; i++) {
+        if (bullets[i].indexOf(v) !== -1 || v.indexOf(bullets[i]) !== -1) return;
+      }
+      bullets.push(v);
+    });
     while (bullets.length < 4) bullets.push(['조건 확인', '신청 절차', '사후 관리', '비용 안내'][bullets.length]);
+    /* 서브 카피: 불릿과 겹치지 않는 문장으로 */
+    var subs2 = [];
+    function addSub(t) {
+      var v = cut(trimPunct(t), 46);
+      if (!v || v.length < 6) return;
+      for (var i = 0; i < subs2.length; i++) if (subs2[i] === v) return;
+      subs2.push(v);
+    }
+    (p.benefits || []).forEach(function (b) {
+      var dup = false;
+      for (var i = 0; i < bullets.length; i++) if (bullets[i].indexOf(b.slice(0, 10)) !== -1 || b.indexOf(bullets[i].slice(0, 10)) !== -1) dup = true;
+      if (!dup) addSub(b);
+    });
+    if (p.forWhom[0]) addSub('대상: ' + whoPhrase(p));
+    if (!subs2.length) addSub('자세한 조건은 신청 페이지에서 확인하세요');
     return {
       headline: heads.slice(0, 5),
-      sub: subs.slice(0, 3),
+      sub: subs2.slice(0, 3),
       bullets: bullets.slice(0, 4),
       cta: [s + ' 신청하기', '조건 확인하기', pr ? pr + '부터 시작하기' : '무료로 확인하기', '문의 남기기'],
       caution: p.cautions.slice(0, 3),
