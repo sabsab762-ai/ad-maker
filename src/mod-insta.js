@@ -37,6 +37,15 @@
     slides: [], canvases: [], cur: 0, product: null, handle: '@my_brand'
   };
 
+  function blogFromProduct(p) {
+    var lines = [];
+    (p.benefits || []).forEach(function (b) { if (b && !/찾지 못했/.test(b)) lines.push(b); });
+    if (p.forWhom && p.forWhom[0]) lines.push(A.trimPunct(p.forWhom[0]).replace(/[.]$/, ''));
+    if (p.howTo && p.howTo[0]) lines.push(A.trimPunct(p.howTo[0]).replace(/[.]$/, ''));
+    if (p.cautions && p.cautions[0]) lines.push(A.trimPunct(p.cautions[0]).replace(/[.]$/, ''));
+    return lines.join('\n');
+  }
+
   function fontCss(k) {
     var f = FONTS.filter(function (x) { return x.k === k; })[0];
     return (f || FONTS[0]).css;
@@ -403,7 +412,7 @@
         if (p) {
           st.product = p;
           st.blogTitle = p.title;
-          st.blogBody = (p.benefits || []).concat((p.points || []).map(function (x) { return x.desc; })).join('\n');
+          st.blogBody = blogFromProduct(p);
           st.situation = (p.personas[0] || {}).desc || '';
         }
       }
@@ -526,7 +535,7 @@
       if (!p) return;
       st.product = p;
       st.blogTitle = p.title;
-      st.blogBody = (p.benefits || []).concat((p.points || []).map(function (x) { return x.desc; })).join('\n');
+      st.blogBody = blogFromProduct(p);
       st.situation = (p.personas[0] || {}).desc || '';
       H.$('#in-btitle', left).value = st.blogTitle;
       H.$('#in-bbody', left).value = st.blogBody;
