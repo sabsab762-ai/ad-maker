@@ -182,9 +182,26 @@
         '</button>';
     }).join('');
 
+    var PLAY = 'https://kimkamatune.github.io/play/';
+    var playLinks = [
+      ['🔮 사주', 'saju'], ['🧠 심리테스트', 'quiz'], ['🌅 오늘의 운세', 'daily'], ['🃏 타로', 'tarot'],
+      ['💘 궁합·케미', 'chemi'], ['⚖️ 밸런스', 'balance'], ['🐾 부캐·동물상', 'animal'], ['🌙 꿈해몽', 'dream']
+    ].map(function (x) {
+      return '<a class="chip" style="text-decoration:none;display:inline-flex;align-items:center" href="' + PLAY + '#' + x[1] + '" target="_blank" rel="noopener">' + x[0] + '</a>';
+    }).join('');
+    var playBlock = '<div class="panel" style="margin-top:18px;border-color:#E7DEFF;background:linear-gradient(135deg,#F7F3FF,#FFFFFF 55%,#FFF4F8)">' +
+      '<h3>🎭 김카마 놀이터 8종 <span class="pill">친구 공유용</span></h3>' +
+      '<p class="psub">친구에게 링크만 보내면 같이 노는 무료 테스트 8종입니다. 사주·심리·운세·타로·궁합·밸런스게임·부캐동물상·꿈해몽. 결과는 1080×1350 이미지 카드로 저장되고, 밸런스 게임은 친구와 일치율까지 비교합니다.</p>' +
+      '<div class="chiprow">' + playLinks + '</div>' +
+      '<div class="actions">' +
+      '<a class="btn btn-primary" href="' + PLAY + '" target="_blank" rel="noopener" style="text-decoration:none">놀이터 열기 →</a>' +
+      '<button class="btn btn-line" type="button" data-act="play-copy">🔗 놀이터 링크 복사</button>' +
+      '</div></div>';
+
     app.innerHTML = '<div class="wrap">' +
       '<div class="hello"><h1>환영합니다, 운영 관리자님</h1>' +
       '<p>광고 소재 만들기 ' + App.modules.length + '종 자판기 — 필요한 카드를 누르면 바로 시작합니다. 작업 내용은 이 브라우저에 자동 저장돼요.</p></div>' +
+      playBlock +
       '<div class="grid">' + cards + '</div>' +
       '</div>';
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -254,6 +271,7 @@
       if (a === 'help') showHelp();
       if (a === 'ask') showAsk();
       if (a === 'backup') backupData();
+      if (a === 'play-copy') copyText('오늘 심심할 때 이거 해봐 🎭\n사주·심리테스트·운세·타로·궁합·밸런스게임·부캐동물상·꿈해몽 8종 무료\n👉 https://kimkamatune.github.io/play/', act, '놀이터 링크를 복사했어요!');
       return;
     }
   });

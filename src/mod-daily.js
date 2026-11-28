@@ -241,7 +241,7 @@
       }
 
       H.$('#dl-demo', root).addEventListener('click', function () {
-        el.date.value = '1989-02-09';
+        el.date.value = '1995-05-15';
         el.name.value = el.name.value || '김카마';
         App.toast('예시 정보를 채웠어요. 오늘의 운세 보기를 눌러보세요.');
       });
